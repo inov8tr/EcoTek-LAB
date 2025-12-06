@@ -19,6 +19,22 @@ const resourceSections = [
       "Includes environment variables, seed scripts, and deployment tips.",
     ],
   },
+  {
+    title: "Support",
+    description: "Reach the team with issues, feature requests, or bug reports.",
+    links: [
+      {
+        label: "Contact support",
+        note: "Submit a request; we reply by email",
+        href: "/resources/support",
+      },
+    ],
+    details: [
+      "Mark urgent issues for faster triage.",
+      "Include steps to reproduce and impacted data.",
+      "We log requests and notify admins.",
+    ],
+  },
 ];
 
 export default function ResourcesPage() {
