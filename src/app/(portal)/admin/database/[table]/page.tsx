@@ -78,7 +78,7 @@ export default async function TablePage({ params, searchParams }: PageProps) {
           <Link href={"/admin/database" as Route}>Back to tables</Link>
         </Button>
         <Button asChild variant="ghost">
-          <Link href={`/api/admin/database/${encodeURIComponent(tableParam)}/export` as Route}>
+          <Link href={`/api/admin/database/${encodeURIComponent(tableParam)}/export` as Route} aria-label="Export table as CSV">
             Export CSV
           </Link>
         </Button>

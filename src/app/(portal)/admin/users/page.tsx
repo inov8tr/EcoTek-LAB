@@ -136,6 +136,7 @@ export default async function AdminUsersPage({
               },
             }}
             className="text-sm font-semibold text-[var(--color-text-link)] underline-offset-4 hover:underline"
+            aria-label="Export filtered users as CSV"
           >
             Export CSV
           </Link>

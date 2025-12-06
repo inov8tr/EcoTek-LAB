@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/utils";
 import { publishNotification } from "@/lib/realtime";
 import { NotificationFeed } from "./feed";
+import { SnoozeToggle } from "./snooze";
 import { markAllNotificationsRead, markNotificationRead } from "./actions";
 
 export default async function NotificationsPage() {
@@ -47,11 +48,14 @@ export default async function NotificationsPage() {
       </div>
 
       {unreadCount > 0 && (
-        <form action={markAllNotificationsRead}>
-          <button className="rounded-lg bg-[var(--color-bg-alt)] px-3 py-2 text-xs font-semibold text-[var(--color-text-heading)] hover:bg-[var(--color-bg-alt)]/80">
-            Mark all as read
-          </button>
-        </form>
+        <div className="flex flex-wrap items-center gap-2">
+          <form action={markAllNotificationsRead}>
+            <button className="rounded-lg bg-[var(--color-bg-alt)] px-3 py-2 text-xs font-semibold text-[var(--color-text-heading)] hover:bg-[var(--color-bg-alt)]/80">
+              Mark all as read
+            </button>
+          </form>
+          <SnoozeToggle />
+        </div>
       )}
 
       <StatusStrip
