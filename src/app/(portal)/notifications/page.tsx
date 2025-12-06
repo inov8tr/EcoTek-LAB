@@ -3,6 +3,7 @@ import { requireStatus } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/utils";
 import { publishNotification } from "@/lib/realtime";
+import { NotificationFeed } from "./feed";
 import { markAllNotificationsRead, markNotificationRead } from "./actions";
 
 export default async function NotificationsPage() {
@@ -24,6 +25,12 @@ export default async function NotificationsPage() {
   const securityEvents = events.filter((e) => e.eventType.toLowerCase().includes("login") || e.eventType.toLowerCase().includes("2fa"));
   const accountEvents = events.filter((e) => !securityEvents.includes(e));
   const unreadCount = events.filter((e) => !e.readAt).length;
+  const feedItems = events.map((e) => ({
+    id: e.id,
+    eventType: e.eventType,
+    detail: e.detail,
+    createdAt: e.createdAt,
+  }));
 
   return (
     <div className="space-y-6">
@@ -91,6 +98,18 @@ export default async function NotificationsPage() {
       />
 
       <SystemCard />
+
+      <section className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-semibold text-[var(--color-text-heading)]">Live feed</div>
+            <div className="text-xs text-[var(--color-text-muted)]">New events appear in real time.</div>
+          </div>
+        </div>
+        <div className="mt-3">
+          <NotificationFeed userId={user.id} initial={feedItems} />
+        </div>
+      </section>
     </div>
   );
 }
