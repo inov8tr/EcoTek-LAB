@@ -4,15 +4,17 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
-import { LogOut, Settings, User, HelpCircle, Globe, Moon, Sun, Laptop } from "lucide-react";
+import { LogOut, Settings, User, HelpCircle, Globe, Moon, Sun, Laptop, Bell } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import type { CurrentUser } from "@/lib/auth-helpers";
 import { updateQuickPrefs } from "@/app/actions/prefs";
 
-export function UserMenu({ user }: { user: CurrentUser }) {
+export function UserMenu({ user, unreadCount = 0 }: { user: CurrentUser; unreadCount?: number }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
   const [isPending, startTransition] = useTransition();
+  const activeTheme = user.theme ?? "system";
+  const activeLocale = user.locale ?? "en-US";
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -58,9 +60,14 @@ export function UserMenu({ user }: { user: CurrentUser }) {
         aria-label="Open account menu"
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]"
+        className="relative flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]"
       >
         <AvatarCircle src={user.avatarUrl ?? undefined} alt={user.displayName ?? user.name ?? "User"} fallback={initial} />
+        {unreadCount > 0 && (
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[var(--color-accent-primary)] px-[6px] text-[10px] font-semibold text-white">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
       </button>
 
       {open && (
@@ -77,21 +84,57 @@ export function UserMenu({ user }: { user: CurrentUser }) {
           <div className="border-t border-border">
             <MenuItem href={"/account" as Route} icon={<User className="h-4 w-4" />} label="Account" onSelect={() => setOpen(false)} />
             <MenuItem href={"/settings" as Route} icon={<Settings className="h-4 w-4" />} label="Settings" onSelect={() => setOpen(false)} />
+            <MenuItem
+              href={"/notifications" as Route}
+              icon={<Bell className="h-4 w-4" />}
+              label={`Notifications${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
+              onSelect={() => setOpen(false)}
+            />
             <MenuItem href={"/resources/user-guide" as Route} icon={<HelpCircle className="h-4 w-4" />} label="Help / Support" onSelect={() => setOpen(false)} />
             <Divider />
             <div className="px-3 py-2">
               <p className="text-xs font-semibold text-[var(--color-text-muted)]">Theme</p>
               <div className="mt-2 grid grid-cols-3 gap-2">
-                <ToggleChip label="Light" icon={<Sun className="h-4 w-4" />} onClick={() => changePrefs("light", undefined)} onKeyDown={handleKeyDown} />
-                <ToggleChip label="Dark" icon={<Moon className="h-4 w-4" />} onClick={() => changePrefs("dark", undefined)} onKeyDown={handleKeyDown} />
-                <ToggleChip label="System" icon={<Laptop className="h-4 w-4" />} onClick={() => changePrefs("system", undefined)} onKeyDown={handleKeyDown} />
+                <ToggleChip
+                  label="Light"
+                  icon={<Sun className="h-4 w-4" />}
+                  active={activeTheme === "light"}
+                  onClick={() => changePrefs("light", undefined)}
+                  onKeyDown={handleKeyDown}
+                />
+                <ToggleChip
+                  label="Dark"
+                  icon={<Moon className="h-4 w-4" />}
+                  active={activeTheme === "dark"}
+                  onClick={() => changePrefs("dark", undefined)}
+                  onKeyDown={handleKeyDown}
+                />
+                <ToggleChip
+                  label="System"
+                  icon={<Laptop className="h-4 w-4" />}
+                  active={activeTheme === "system"}
+                  onClick={() => changePrefs("system", undefined)}
+                  onKeyDown={handleKeyDown}
+                />
               </div>
             </div>
             <div className="px-3 py-2">
               <p className="text-xs font-semibold text-[var(--color-text-muted)]">Language</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
-                <ToggleChip label="EN" icon={<Globe className="h-4 w-4" />} onClick={() => changePrefs(undefined, "en-US")} onKeyDown={handleKeyDown} />
-                <ToggleChip label="KO" icon={<Globe className="h-4 w-4" />} onClick={() => changePrefs(undefined, "ko-KR")} onKeyDown={handleKeyDown} />
+                <ToggleChip
+                  label="EN"
+                  icon={<Globe className="h-4 w-4" />}
+                  active={(activeLocale ?? "").startsWith("en")}
+                  onClick={() => changePrefs(undefined, "en-US")}
+                  onKeyDown={handleKeyDown}
+                />
+                <ToggleChip
+                  label="KO"
+                  icon={<Globe className="h-4 w-4" />}
+                  active={(activeLocale ?? "").startsWith("ko")}
+                  onClick={() => changePrefs(undefined, "ko-KR")}
+                  onKeyDown={handleKeyDown}
+                />
               </div>
             </div>
             <form action={logout} className="border-t border-border">
@@ -141,11 +184,13 @@ function Divider() {
 function ToggleChip({
   label,
   icon,
+  active = false,
   onClick,
   onKeyDown,
 }: {
   label: string;
   icon: React.ReactNode;
+  active?: boolean;
   onClick: () => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLButtonElement>) => void;
 }) {
@@ -154,7 +199,12 @@ function ToggleChip({
       type="button"
       onClick={onClick}
       onKeyDown={onKeyDown}
-      className="flex items-center justify-center gap-1 rounded-lg border border-border bg-[var(--color-bg-alt)] px-2 py-1 text-[11px] font-semibold text-[var(--color-text-heading)] hover:bg-[var(--color-bg-alt)]/70"
+      className={`flex items-center justify-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold transition ${
+        active
+          ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/10 text-[var(--color-text-heading)]"
+          : "border-border bg-[var(--color-bg-alt)] text-[var(--color-text-heading)] hover:bg-[var(--color-bg-alt)]/70"
+      }`}
+      aria-pressed={active}
     >
       {icon}
       <span>{label}</span>

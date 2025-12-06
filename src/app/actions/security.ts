@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { sendMail, isEmailEnabled } from "@/lib/mailer";
 import { getCurrentUser } from "@/lib/auth-helpers";
 
 function redirectWithMessage(message: string, type: "success" | "error" = "success") {
@@ -28,9 +29,30 @@ export async function requestPasswordReset(_prev: any, formData: FormData) {
     },
   });
 
+  const baseUrl = process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL ?? "";
+  const resetUrl = `${baseUrl.replace(/\/$/, "")}/reset-password/${token}`;
+  if (isEmailEnabled() && baseUrl) {
+    await sendMail({
+      to: user.email,
+      subject: "Reset your password",
+      text: `Reset your password: ${resetUrl}`,
+      html: `<p>Reset your password:</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
+    }).catch((err) => console.error("Password reset email failed", err));
+  }
+  await prisma.securityEvent.create({
+    data: {
+      userId: user.id,
+      eventType: "PASSWORD_RESET_REQUEST",
+      detail: "Password reset requested",
+      category: "security",
+      channel: isEmailEnabled() ? "email" : "in-app",
+      link: resetUrl,
+    },
+  });
+
   return {
-    success: "Password reset link generated.",
-    link: `/reset-password?token=${token}`,
+    success: isEmailEnabled() ? "Password reset link emailed if the account exists." : "Password reset link generated.",
+    link: resetUrl,
   };
 }
 
@@ -53,6 +75,7 @@ export async function resetPassword(_prev: any, formData: FormData) {
         userId: record.userId,
         eventType: "PASSWORD_RESET",
         detail: "Password reset via token",
+        category: "security",
       },
     }),
   ]);
@@ -68,7 +91,17 @@ export async function sendVerificationLink() {
   await prisma.emailVerificationToken.create({
     data: { token, userId: user.id, expiresAt },
   });
-  return { success: "Verification link generated.", link: `/verify-email?token=${token}` };
+  const baseUrl = process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL ?? "";
+  const verifyUrl = `${baseUrl.replace(/\/$/, "")}/verify-email?token=${token}`;
+  if (isEmailEnabled() && baseUrl) {
+    await sendMail({
+      to: user.email ?? "",
+      subject: "Verify your email",
+      text: `Click to verify: ${verifyUrl}`,
+      html: `<p>Verify your email:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
+    }).catch((err) => console.error("Verification email failed", err));
+  }
+  return { success: isEmailEnabled() ? "Verification email sent." : "Verification link generated.", link: verifyUrl };
 }
 
 export async function verifyEmailToken(token: string) {
@@ -80,7 +113,7 @@ export async function verifyEmailToken(token: string) {
     prisma.user.update({ where: { id: record.userId }, data: { emailVerified: new Date() } }),
     prisma.emailVerificationToken.update({ where: { token }, data: { used: true } }),
     prisma.securityEvent.create({
-      data: { userId: record.userId, eventType: "EMAIL_VERIFIED", detail: "Email verified" },
+      data: { userId: record.userId, eventType: "EMAIL_VERIFIED", detail: "Email verified", category: "account" },
     }),
   ]);
   return { success: true, message: "Email verified." };
@@ -110,7 +143,12 @@ export async function signOutAllSessions() {
     data: { revoked: true, revokedAt: new Date() },
   });
   await prisma.securityEvent.create({
-    data: { userId: user.id, eventType: "SESSIONS_REVOKED", detail: "Signed out of all sessions" },
+    data: {
+      userId: user.id,
+      eventType: "SESSIONS_REVOKED",
+      detail: "Signed out of all sessions",
+      category: "security",
+    },
   });
   redirect("/login");
 }

@@ -51,6 +51,13 @@ export default async function LoginPage({
             </Link>
             .
           </p>
+          <p className="mt-2">
+            Forgot password?{" "}
+            <Link href={"/reset-password" as Route} className="font-semibold text-[var(--color-text-link)]">
+              Reset it here
+            </Link>
+            .
+          </p>
         </div>
       </div>
     </div>

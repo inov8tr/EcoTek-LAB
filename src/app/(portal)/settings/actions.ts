@@ -7,6 +7,7 @@ import { authenticator } from "otplib";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { randomUUID } from "crypto";
+import { sendMail, isEmailEnabled } from "@/lib/mailer";
 
 function redirectWithMessage(message: string, type: "success" | "error" = "success") {
   const params = new URLSearchParams();
@@ -40,6 +41,17 @@ export async function updateProfile(formData: FormData) {
       timeZone: (formData.get("timeZone") ?? "").toString().trim() || "UTC",
       theme: (formData.get("theme") ?? "system").toString(),
       notificationEmailOptIn: formData.get("notificationEmailOptIn") === "on",
+      notificationPushOptIn: formData.get("notificationPushOptIn") === "on",
+      notificationInAppOptIn: formData.get("notificationInAppOptIn") === "on",
+    },
+  });
+  await prisma.securityEvent.create({
+    data: {
+      userId: user.id,
+      eventType: "PROFILE_UPDATED",
+      detail: "Profile or preferences updated",
+      category: "account",
+      channel: "in-app",
     },
   });
   revalidatePath("/settings");
@@ -65,6 +77,9 @@ export async function changePassword(formData: FormData) {
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+  await prisma.securityEvent.create({
+    data: { userId: user.id, eventType: "PASSWORD_CHANGED", detail: "Password updated", category: "security" },
+  });
   revalidatePath("/settings");
   redirectWithMessage("Password updated");
 }
@@ -75,6 +90,14 @@ export async function toggleLoginAlerts(formData: FormData) {
   await prisma.user.update({
     where: { id: user.id },
     data: { loginAlerts: enabled },
+  });
+  await prisma.securityEvent.create({
+    data: {
+      userId: user.id,
+      eventType: "LOGIN_ALERTS",
+      detail: enabled ? "Login alerts enabled" : "Login alerts disabled",
+      category: "account",
+    },
   });
   revalidatePath("/settings");
   redirectWithMessage("Login alerts updated");
@@ -88,7 +111,7 @@ export async function generateTwoFactor() {
     data: { twoFactorSecret: secret, twoFactorEnabled: false },
   });
   await prisma.securityEvent.create({
-    data: { userId: user.id, eventType: "2FA_SECRET", detail: "2FA secret generated" },
+    data: { userId: user.id, eventType: "2FA_SECRET", detail: "2FA secret generated", category: "security" },
   });
   revalidatePath("/settings");
   redirectWithMessage("2FA secret generated. Scan the new code.");
@@ -113,7 +136,7 @@ export async function verifyTwoFactor(formData: FormData) {
     data: { twoFactorEnabled: true },
   });
   await prisma.securityEvent.create({
-    data: { userId: user.id, eventType: "2FA_ENABLED", detail: "2FA enabled" },
+    data: { userId: user.id, eventType: "2FA_ENABLED", detail: "2FA enabled", category: "security" },
   });
   await regenerateRecoveryCodes();
   revalidatePath("/settings");
@@ -127,7 +150,7 @@ export async function disableTwoFactor() {
     data: { twoFactorEnabled: false, twoFactorSecret: null },
   });
   await prisma.securityEvent.create({
-    data: { userId: user.id, eventType: "2FA_DISABLED", detail: "2FA disabled" },
+    data: { userId: user.id, eventType: "2FA_DISABLED", detail: "2FA disabled", category: "security" },
   });
   revalidatePath("/settings");
   redirectWithMessage("2FA disabled");
@@ -142,7 +165,12 @@ export async function revokeSession(formData: FormData) {
     data: { revoked: true, revokedAt: new Date() },
   });
   await prisma.securityEvent.create({
-    data: { userId: user.id, eventType: "SESSION_REVOKED", detail: `Session revoked ${jti}` },
+    data: {
+      userId: user.id,
+      eventType: "SESSION_REVOKED",
+      detail: `Session revoked ${jti}`,
+      category: "security",
+    },
   });
   revalidatePath("/settings");
   redirectWithMessage("Session revoked");
@@ -155,7 +183,7 @@ export async function revokeAllSessions() {
     data: { revoked: true, revokedAt: new Date() },
   });
   await prisma.securityEvent.create({
-    data: { userId: user.id, eventType: "SESSIONS_REVOKED", detail: "All sessions revoked" },
+    data: { userId: user.id, eventType: "SESSIONS_REVOKED", detail: "All sessions revoked", category: "security" },
   });
   revalidatePath("/settings");
   redirectWithMessage("All sessions revoked");
@@ -170,7 +198,12 @@ export async function regenerateRecoveryCodes() {
       data: codes.map((code) => ({ userId: user.id, code })),
     }),
     prisma.securityEvent.create({
-      data: { userId: user.id, eventType: "2FA_RECOVERY_REGEN", detail: "Recovery codes regenerated" },
+      data: {
+        userId: user.id,
+        eventType: "2FA_RECOVERY_REGEN",
+        detail: "Recovery codes regenerated",
+        category: "security",
+      },
     }),
   ]);
   revalidatePath("/settings");
@@ -185,8 +218,50 @@ export async function generateVerificationLink() {
     data: { token, userId: user.id, expiresAt },
   });
   await prisma.securityEvent.create({
-    data: { userId: user.id, eventType: "EMAIL_VERIFY_LINK", detail: "Verification link generated" },
+    data: {
+      userId: user.id,
+      eventType: "EMAIL_VERIFY_LINK",
+      detail: "Verification link generated",
+      category: "account",
+      channel: "email",
+      link: `/verify-email?token=${token}`,
+    },
   });
+  const baseUrl = process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL ?? "";
+  if (isEmailEnabled() && baseUrl) {
+    const verifyUrl = `${baseUrl.replace(/\/$/, "")}/verify-email?token=${token}`;
+    await sendMail({
+      to: user.email ?? "",
+      subject: "Verify your email",
+      text: `Click to verify: ${verifyUrl}`,
+      html: `<p>Click to verify your email:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
+    }).catch((err) => console.error("Email send failed", err));
+  }
   revalidatePath("/settings");
   redirectWithMessage("Verification link generated");
+}
+
+export async function updateNotificationPrefs(formData: FormData) {
+  const user = await requireActiveUser();
+  const email = formData.get("notificationEmailOptIn") === "on";
+  const push = formData.get("notificationPushOptIn") === "on";
+  const inApp = formData.get("notificationInAppOptIn") === "on";
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      notificationEmailOptIn: email,
+      notificationPushOptIn: push,
+      notificationInAppOptIn: inApp,
+    },
+  });
+  await prisma.securityEvent.create({
+    data: {
+      userId: user.id,
+      eventType: "NOTIFICATION_PREFS",
+      detail: `Prefs updated (email:${email ? "on" : "off"}, push:${push ? "on" : "off"}, in-app:${inApp ? "on" : "off"})`,
+      category: "account",
+    },
+  });
+  revalidatePath("/settings");
+  redirectWithMessage("Notification preferences updated");
 }

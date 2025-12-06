@@ -10,15 +10,22 @@ interface DataTableProps<T> {
   columns: TableColumn<T>[];
   data: T[];
   className?: string;
+  emptyMessage?: string;
 }
 
 export function DataTable<T extends object>({
   columns,
   data,
   className,
+  emptyMessage = "No records found.",
 }: DataTableProps<T>) {
   return (
     <div className={cn("space-y-4", className)}>
+      {data.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-border bg-[var(--color-bg-alt)]/60 px-4 py-6 text-sm text-[var(--color-text-muted)]">
+          {emptyMessage}
+        </div>
+      )}
       <div className="hidden overflow-x-auto rounded-2xl border border-border md:block">
         <table className="w-full table-auto border-separate border-spacing-y-2 text-left">
           <thead>

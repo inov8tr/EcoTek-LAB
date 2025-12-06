@@ -105,6 +105,9 @@ export const {
           loginAlerts: user.loginAlerts,
           twoFactorEnabled: user.twoFactorEnabled,
           emailVerified: user.emailVerified,
+          notificationEmailOptIn: user.notificationEmailOptIn,
+          notificationPushOptIn: user.notificationPushOptIn,
+          notificationInAppOptIn: user.notificationInAppOptIn,
         };
       },
     }),
@@ -126,6 +129,9 @@ export const {
         token.loginAlerts = (user as any).loginAlerts ?? false;
         token.twoFactorEnabled = (user as any).twoFactorEnabled ?? false;
         token.emailVerified = (user as any).emailVerified ?? null;
+        token.notificationEmailOptIn = (user as any).notificationEmailOptIn ?? true;
+        token.notificationPushOptIn = (user as any).notificationPushOptIn ?? false;
+        token.notificationInAppOptIn = (user as any).notificationInAppOptIn ?? true;
         token.sessionId = token.sessionId ?? randomUUID();
         // Persist session for active user
         prisma.session
@@ -154,6 +160,9 @@ export const {
         session.user.theme = (token as any).theme ?? "system";
         session.user.loginAlerts = (token as any).loginAlerts ?? false;
         session.user.twoFactorEnabled = (token as any).twoFactorEnabled ?? false;
+        (session.user as any).notificationEmailOptIn = (token as any).notificationEmailOptIn ?? true;
+        (session.user as any).notificationPushOptIn = (token as any).notificationPushOptIn ?? false;
+        (session.user as any).notificationInAppOptIn = (token as any).notificationInAppOptIn ?? true;
         (session.user as any).sessionId = (token as any).sessionId ?? null;
       }
       return session;

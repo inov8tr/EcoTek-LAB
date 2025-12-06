@@ -23,6 +23,9 @@ export type CurrentUser = {
   loginAlerts?: boolean;
   twoFactorEnabled?: boolean;
   sessionId?: string | null;
+  notificationPushOptIn?: boolean | null;
+  notificationInAppOptIn?: boolean | null;
+  unreadNotifications?: number;
 };
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {

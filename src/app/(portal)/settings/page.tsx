@@ -1,7 +1,9 @@
 import { UserRole, UserStatus } from "@prisma/client";
+import { authenticator } from "otplib";
 import { getDatabaseStatus } from "@/lib/db";
 import { requireStatus, getCurrentUser } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { describeUserAgent, formatDateTime } from "@/lib/utils";
 import {
   updateProfile,
   changePassword,
@@ -43,6 +45,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       twoFactorSecret: true,
       emailVerified: true,
       notificationEmailOptIn: true,
+      notificationPushOptIn: true,
+      notificationInAppOptIn: true,
     },
   });
   const sessions = await prisma.session.findMany({
@@ -62,6 +66,10 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     where: { userId: user.id, used: false, expiresAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
   });
+  const otpauthUrl =
+    fullUser?.twoFactorSecret && fullUser.email
+      ? authenticator.keyuri(fullUser.email, "EcoTek", fullUser.twoFactorSecret)
+      : null;
 
   const success = typeof params.success === "string" ? params.success : null;
   const error = typeof params.error === "string" ? params.error : null;
@@ -220,6 +228,21 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                       <span className="font-semibold">Secret:</span>{" "}
                       <code className="break-all">{fullUser.twoFactorSecret}</code>
                     </div>
+                    {otpauthUrl && (
+                      <div className="flex flex-col gap-2 rounded-lg border border-border bg-white p-2">
+                        <div className="text-xs font-semibold text-[var(--color-text-heading)]">Scan QR</div>
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                            otpauthUrl
+                          )}`}
+                          alt="2FA QR code"
+                          className="h-44 w-44 self-start rounded-md border border-border bg-white"
+                        />
+                        <div className="text-xs text-[var(--color-text-muted)] break-all">
+                          otpauth: <code>{otpauthUrl}</code>
+                        </div>
+                      </div>
+                    )}
                     <div className="text-xs text-[var(--color-text-muted)]">
                       Add this secret or its QR code to your authenticator app, then enter the 6-digit code to verify.
                     </div>
@@ -291,6 +314,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           {sessions.length === 0 && <p className="p-4 text-sm text-[var(--color-text-muted)]">No sessions found.</p>}
           {sessions.map((s) => {
             const isCurrent = s.jti === user.sessionId;
+            const deviceLabel = describeUserAgent(s.userAgent);
             return (
               <div key={s.id} className="flex items-center justify-between px-4 py-3 text-sm">
                 <div className="space-y-1">
@@ -300,7 +324,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   <div className="text-xs text-[var(--color-text-muted)]">
                     Created {new Date(s.createdAt).toLocaleString()} · Last seen {new Date(s.lastSeenAt).toLocaleString()}
                   </div>
-                  {s.userAgent && <div className="text-xs text-[var(--color-text-muted)]">UA: {s.userAgent}</div>}
+                  {s.userAgent && <div className="text-xs text-[var(--color-text-muted)]">{deviceLabel}</div>}
                   {s.ipAddress && <div className="text-xs text-[var(--color-text-muted)]">IP: {s.ipAddress}</div>}
                 </div>
                 <div className="flex items-center gap-2">
@@ -337,12 +361,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           {securityEvents.length === 0 && <p className="p-4 text-sm text-[var(--color-text-muted)]">No events yet.</p>}
           {securityEvents.map((e) => (
             <div key={e.id} className="flex items-center justify-between px-4 py-3 text-sm">
-              <div className="space-y-1">
-                <div className="font-medium text-[var(--color-text-heading)]">{e.eventType}</div>
-                <div className="text-xs text-[var(--color-text-muted)]">
-                  {new Date(e.createdAt).toLocaleString()} {e.detail ? `· ${e.detail}` : ""}
+                <div className="space-y-1">
+                  <div className="font-medium text-[var(--color-text-heading)]">{e.eventType}</div>
+                  <div className="text-xs text-[var(--color-text-muted)]">
+                  {formatDateTime(e.createdAt, user.locale ?? "en-US", user.timeZone ?? "UTC")} {e.detail ? `· ${e.detail}` : ""}
+                  </div>
                 </div>
-              </div>
               <div className="text-xs text-[var(--color-text-muted)] text-right space-y-1">
                 {e.ipAddress && <div>IP: {e.ipAddress}</div>}
                 {e.userAgent && <div className="max-w-[200px] truncate">UA: {e.userAgent}</div>}

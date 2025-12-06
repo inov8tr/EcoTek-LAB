@@ -9,6 +9,7 @@ import {
   BookOpen,
   Settings,
   Users,
+  Bell,
 } from "lucide-react";
 
 export type Role = "ADMIN" | "RESEARCHER" | "VIEWER";
@@ -57,6 +58,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/analytics", label: "Analytics", icon: BarChart3 },
       { href: "/resources", label: "Resources", icon: BookOpen },
+      { href: "/notifications", label: "Notifications", icon: Bell },
     ],
   },
   {

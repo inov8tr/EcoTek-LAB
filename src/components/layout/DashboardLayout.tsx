@@ -73,9 +73,11 @@ function getPageMeta(pathname: string) {
 export function DashboardLayout({
   children,
   currentUser,
+  unreadCount = 0,
 }: {
   children: React.ReactNode;
   currentUser: CurrentUser;
+  unreadCount?: number;
 }) {
   const pathname = usePathname() || "/dashboard";
   const { title, description } = getPageMeta(pathname);
@@ -95,7 +97,7 @@ export function DashboardLayout({
         className="transition-[padding] pr-4 sm:pr-6 lg:pr-8"
         style={{ paddingLeft: "var(--sidebar-offset)" }}
       >
-        <MainNav currentUser={currentUser} />
+        <MainNav currentUser={currentUser} unreadCount={unreadCount} />
       </div>
 
       <div className="flex flex-1 min-h-0">

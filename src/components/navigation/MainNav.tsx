@@ -8,7 +8,7 @@ import { useViewMode } from "@/context/view-mode-context";
 import type { CurrentUser } from "@/lib/auth-helpers";
 import { UserMenu } from "./UserMenu";
 
-export function MainNav({ currentUser }: { currentUser: CurrentUser }) {
+export function MainNav({ currentUser, unreadCount = 0 }: { currentUser: CurrentUser; unreadCount?: number }) {
   const { allowSwitching } = useViewMode();
 
   return (
@@ -47,7 +47,7 @@ export function MainNav({ currentUser }: { currentUser: CurrentUser }) {
             </p>
           </div>
 
-          <UserMenu user={currentUser} />
+          <UserMenu user={currentUser} unreadCount={unreadCount} />
        </div>
      </div>
    </header>
