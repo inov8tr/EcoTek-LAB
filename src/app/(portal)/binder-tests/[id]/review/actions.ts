@@ -10,14 +10,15 @@ import {
   BinderTestValueSources,
   EMPTY_EXTRACTED,
 } from "@/lib/binder/types";
+import { Prisma } from "@prisma/client";
 
 export async function saveBinderTestReview(binderTestId: string, formData: FormData) {
   const existing = await prisma.binderTest.findUnique({ where: { id: binderTestId } });
   if (!existing) return;
 
-  const aiPayload = (existing.aiExtractedData as any) ?? {};
-  const aiData: Partial<BinderTestExtractedData> = (aiPayload?.data as any) ?? {};
-  const aiSources: BinderTestValueSources = (aiPayload?.sources as any) ?? {};
+  const aiExisting = (existing.aiExtractedData as any) ?? {};
+  const aiData: Partial<BinderTestExtractedData> = (aiExisting?.data as any) ?? {};
+  const aiSources: BinderTestValueSources = (aiExisting?.sources as any) ?? {};
 
   const baseData: BinderTestExtractedData = {
     ...EMPTY_EXTRACTED,
@@ -169,6 +170,11 @@ export async function saveBinderTestReview(binderTestId: string, formData: FormD
     finalData.sampleName = (existing as any).name;
   }
 
+  const aiPayload: Prisma.InputJsonObject = {
+    data: finalData as unknown as Prisma.InputJsonValue,
+    sources: mergedSources as Prisma.InputJsonValue,
+  };
+
   if (existing.folderName) {
     const folderPath = path.join(BINDER_BASE_PATH, existing.folderName, "metadata");
     fs.mkdirSync(folderPath, { recursive: true });
@@ -189,8 +195,8 @@ export async function saveBinderTestReview(binderTestId: string, formData: FormD
       recoveryPct: finalData.recoveryPct,
       jnr_3_2: finalData.jnr_3_2,
       dsrData: finalData.dsrData as any,
-      aiExtractedData: { data: finalData, sources: mergedSources },
-      manualEdits: edits,
+      aiExtractedData: aiPayload,
+      manualEdits: edits as Prisma.InputJsonValue,
       status: "READY",
     },
   });

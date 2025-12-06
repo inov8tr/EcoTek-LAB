@@ -2,7 +2,7 @@ import fs from "fs";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import mime from "mime-types";
-import { UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { runHybridExtractionForBinderTest } from "@/lib/binder/hybridExtraction";
@@ -146,8 +146,10 @@ export async function POST(req: NextRequest) {
         ductilityCm: extraction.data.ductilityCm,
         recoveryPct: extraction.data.recoveryPct,
         jnr_3_2: extraction.data.jnr_3_2,
-        dsrData: extraction.data.dsrData,
-        aiExtractedData: extraction.usedAi ? { data: extraction.data, sources: extraction.sources } : null,
+        dsrData: extraction.data.dsrData as Prisma.InputJsonValue,
+        aiExtractedData: extraction.usedAi
+          ? ({ data: extraction.data, sources: extraction.sources } as unknown as Prisma.InputJsonValue)
+          : Prisma.DbNull,
         status: "PENDING_REVIEW",
       },
     });
