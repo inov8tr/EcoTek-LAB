@@ -238,6 +238,7 @@ model User {
   loginAlerts               Boolean           @default(false)
   twoFactorEnabled          Boolean           @default(false)
   twoFactorSecret           String?
+  notificationEmailOptIn    Boolean           @default(true)
   role                      UserRole          @default(VIEWER)
   status                    UserStatus        @default(PENDING)
   emailVerified             DateTime?

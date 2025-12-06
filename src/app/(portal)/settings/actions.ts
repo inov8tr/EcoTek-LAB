@@ -39,6 +39,7 @@ export async function updateProfile(formData: FormData) {
       locale: (formData.get("locale") ?? "").toString().trim() || "en-US",
       timeZone: (formData.get("timeZone") ?? "").toString().trim() || "UTC",
       theme: (formData.get("theme") ?? "system").toString(),
+      notificationEmailOptIn: formData.get("notificationEmailOptIn") === "on",
     },
   });
   revalidatePath("/settings");

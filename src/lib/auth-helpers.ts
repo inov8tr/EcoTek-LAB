@@ -13,6 +13,8 @@ export type CurrentUser = {
   status: UserStatus;
   displayName?: string | null;
   avatarUrl?: string | null;
+  bannerUrl?: string | null;
+  handle?: string | null;
   pronouns?: string | null;
   bio?: string | null;
   locale?: string | null;

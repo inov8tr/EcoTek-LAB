@@ -42,6 +42,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       twoFactorEnabled: true,
       twoFactorSecret: true,
       emailVerified: true,
+      notificationEmailOptIn: true,
     },
   });
   const sessions = await prisma.session.findMany({
@@ -117,10 +118,14 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                 rows={3}
               />
             </div>
+            <label className="flex items-center gap-2 text-sm text-[var(--color-text-heading)]">
+              <input type="checkbox" name="notificationEmailOptIn" defaultChecked={!!fullUser?.notificationEmailOptIn} />
+              <span>Email notifications enabled</span>
+            </label>
             <button className="rounded-lg bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-white">
               Save profile
             </button>
-            </form>
+          </form>
           <div className="mt-4 rounded-2xl border border-border bg-[var(--color-bg-alt)] p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -263,7 +268,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                     {isCurrent ? "Current session" : "Session"}
                   </div>
                   <div className="text-xs text-[var(--color-text-muted)]">
-                    Created {s.createdAt.toISOString()} · Last seen {s.lastSeenAt.toISOString()}
+                    Created {new Date(s.createdAt).toLocaleString()} · Last seen {new Date(s.lastSeenAt).toLocaleString()}
                   </div>
                   {s.userAgent && <div className="text-xs text-[var(--color-text-muted)]">UA: {s.userAgent}</div>}
                   {s.ipAddress && <div className="text-xs text-[var(--color-text-muted)]">IP: {s.ipAddress}</div>}
@@ -305,7 +310,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               <div className="space-y-1">
                 <div className="font-medium text-[var(--color-text-heading)]">{e.eventType}</div>
                 <div className="text-xs text-[var(--color-text-muted)]">
-                  {e.createdAt.toISOString()} {e.detail ? `· ${e.detail}` : ""}
+                  {new Date(e.createdAt).toLocaleString()} {e.detail ? `· ${e.detail}` : ""}
                 </div>
               </div>
               <div className="text-xs text-[var(--color-text-muted)] text-right space-y-1">

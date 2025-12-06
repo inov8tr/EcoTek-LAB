@@ -5,6 +5,7 @@ import { MainNav } from "@/components/navigation/MainNav";
 import { DashboardBreadcrumbs } from "@/components/navigation/DashboardBreadcrumbs";
 import { Sidebar } from "@/components/layout/Sidebar";
 import type { CurrentUser } from "@/lib/auth-helpers";
+import { useEffect } from "react";
 
 function getPageMeta(pathname: string) {
   switch (true) {
@@ -78,6 +79,15 @@ export function DashboardLayout({
 }) {
   const pathname = usePathname() || "/dashboard";
   const { title, description } = getPageMeta(pathname);
+
+  useEffect(() => {
+    if (currentUser.theme) {
+      document.documentElement.dataset.theme = currentUser.theme;
+    }
+    if (currentUser.locale) {
+      document.documentElement.lang = currentUser.locale;
+    }
+  }, [currentUser.theme, currentUser.locale]);
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-bg-main)]">

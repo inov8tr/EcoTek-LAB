@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 import { LogOut, Settings, User, HelpCircle, Globe, Moon, Sun, Laptop } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import type { CurrentUser } from "@/lib/auth-helpers";
+import { updateQuickPrefs } from "@/app/actions/prefs";
 
 export function UserMenu({ user }: { user: CurrentUser }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -23,6 +25,23 @@ export function UserMenu({ user }: { user: CurrentUser }) {
   }, []);
 
   const initial = user.displayName?.[0] ?? user.name?.[0] ?? user.email?.[0] ?? "U";
+
+  function changePrefs(theme?: string, locale?: string) {
+    startTransition(() => {
+      const fd = new FormData();
+      if (theme) fd.set("theme", theme);
+      if (locale) fd.set("locale", locale);
+      updateQuickPrefs(fd);
+    });
+    setOpen(false);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLButtonElement>) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      changePrefs();
+    }
+  }
 
   return (
     <div className="relative" ref={ref}>
@@ -51,16 +70,16 @@ export function UserMenu({ user }: { user: CurrentUser }) {
             <div className="px-3 py-2">
               <p className="text-xs font-semibold text-[var(--color-text-muted)]">Theme</p>
               <div className="mt-2 grid grid-cols-3 gap-2">
-                <ToggleChip label="Light" icon={<Sun className="h-4 w-4" />} />
-                <ToggleChip label="Dark" icon={<Moon className="h-4 w-4" />} />
-                <ToggleChip label="System" icon={<Laptop className="h-4 w-4" />} />
+                <ToggleChip label="Light" icon={<Sun className="h-4 w-4" />} onClick={() => changePrefs("light", undefined)} onKeyDown={handleKeyDown} />
+                <ToggleChip label="Dark" icon={<Moon className="h-4 w-4" />} onClick={() => changePrefs("dark", undefined)} onKeyDown={handleKeyDown} />
+                <ToggleChip label="System" icon={<Laptop className="h-4 w-4" />} onClick={() => changePrefs("system", undefined)} onKeyDown={handleKeyDown} />
               </div>
             </div>
             <div className="px-3 py-2">
               <p className="text-xs font-semibold text-[var(--color-text-muted)]">Language</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
-                <ToggleChip label="EN" icon={<Globe className="h-4 w-4" />} />
-                <ToggleChip label="KO" icon={<Globe className="h-4 w-4" />} />
+                <ToggleChip label="EN" icon={<Globe className="h-4 w-4" />} onClick={() => changePrefs(undefined, "en-US")} onKeyDown={handleKeyDown} />
+                <ToggleChip label="KO" icon={<Globe className="h-4 w-4" />} onClick={() => changePrefs(undefined, "ko-KR")} onKeyDown={handleKeyDown} />
               </div>
             </div>
             <form action={logout} className="border-t border-border">
@@ -107,10 +126,22 @@ function Divider() {
   return <div className="border-t border-border" />;
 }
 
-function ToggleChip({ label, icon }: { label: string; icon: React.ReactNode }) {
+function ToggleChip({
+  label,
+  icon,
+  onClick,
+  onKeyDown,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLButtonElement>) => void;
+}) {
   return (
     <button
       type="button"
+      onClick={onClick}
+      onKeyDown={onKeyDown}
       className="flex items-center justify-center gap-1 rounded-lg border border-border bg-[var(--color-bg-alt)] px-2 py-1 text-[11px] font-semibold text-[var(--color-text-heading)] hover:bg-[var(--color-bg-alt)]/70"
     >
       {icon}

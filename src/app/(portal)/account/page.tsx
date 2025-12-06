@@ -23,7 +23,11 @@ export default async function AccountPage() {
         <p className="text-[var(--color-text-muted)]">Manage your profile and approval status.</p>
       </div>
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+        {currentUser.bannerUrl && (
+          <div className="h-24 w-full bg-cover bg-center" style={{ backgroundImage: `url(${currentUser.bannerUrl})` }} />
+        )}
+        <div className="p-6">
         <dl className="grid gap-6 md:grid-cols-2">
           <div>
             <dt className="text-xs font-semibold uppercase tracking-[0.4em] text-[var(--color-text-muted)]">
@@ -31,6 +35,14 @@ export default async function AccountPage() {
             </dt>
             <dd className="text-xl font-semibold text-[var(--color-text-heading)]">
               {currentUser.name ?? "—"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-[0.4em] text-[var(--color-text-muted)]">
+              Handle
+            </dt>
+            <dd className="text-xl font-semibold text-[var(--color-text-heading)]">
+              {currentUser.handle ? `@${currentUser.handle}` : "—"}
             </dd>
           </div>
           <div>
@@ -58,7 +70,9 @@ export default async function AccountPage() {
             </dd>
           </div>
         </dl>
-        <p className="mt-6 text-sm text-[var(--color-text-main)]">{statusDescription}</p>
+        {currentUser.bio && <p className="mt-4 text-sm text-[var(--color-text-main)]">{currentUser.bio}</p>}
+        <p className="mt-3 text-sm text-[var(--color-text-main)]">{statusDescription}</p>
+        </div>
       </section>
 
       <section className="rounded-2xl border border-dashed border-border bg-[var(--color-bg-alt)]/70 p-6 text-sm text-[var(--color-text-main)]">
