@@ -266,6 +266,7 @@ model Session {
   ipAddress   String?
   createdAt   DateTime @default(now())
   lastSeenAt  DateTime @default(now())
+  loginNotified Boolean @default(false)
   revoked     Boolean  @default(false)
   revokedAt   DateTime?
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
