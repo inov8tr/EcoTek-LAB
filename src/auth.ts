@@ -66,8 +66,8 @@ export const {
   callbacks: {
     jwt({ token, user }) {
       if (user) {
-        token.role = (user as { role?: string }).role;
-        token.status = (user as { status?: string }).status;
+        token.role = (user as { role?: UserRole }).role;
+        token.status = (user as { status?: UserStatus }).status;
       }
       return token;
     },
