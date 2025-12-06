@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
-import { LogOut, Settings, User, ChevronDown } from "lucide-react";
+import { LogOut, Settings, User } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import type { CurrentUser } from "@/lib/auth-helpers";
 
@@ -29,15 +29,14 @@ export function UserMenu({ user }: { user: CurrentUser }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-2xl border border-border bg-[var(--color-bg-alt)] px-3 py-2 text-sm font-semibold text-[var(--color-text-heading)] shadow-sm hover:bg-[var(--color-bg-alt)]/70"
+        aria-label="Open account menu"
+        className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white shadow-sm transition hover:shadow-md"
       >
         <AvatarCircle src={user.avatarUrl ?? undefined} alt={user.displayName ?? user.name ?? "User"} fallback={initial} />
-        <span className="hidden sm:block max-w-[120px] truncate">{user.displayName ?? user.name ?? user.email}</span>
-        <ChevronDown className="h-4 w-4 text-[var(--color-text-muted)]" />
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border bg-white shadow-xl">
+        <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border bg-white shadow-lg ring-1 ring-black/5">
           <div className="px-4 py-3">
             <div className="text-sm font-semibold text-[var(--color-text-heading)] truncate">
               {user.displayName ?? user.name ?? "Account"}
