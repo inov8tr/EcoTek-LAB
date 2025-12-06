@@ -3,7 +3,7 @@ import { requireStatus } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/utils";
 import { publishNotification } from "@/lib/realtime";
-import { NotificationFeed } from "./feed";
+import { NotificationFilterFeed } from "./filter-feed";
 import { SnoozeToggle } from "./snooze";
 import { markAllNotificationsRead, markNotificationRead } from "./actions";
 
@@ -30,6 +30,7 @@ export default async function NotificationsPage() {
     id: e.id,
     eventType: e.eventType,
     detail: e.detail,
+    category: e.category,
     createdAt: e.createdAt,
   }));
 
@@ -107,11 +108,11 @@ export default async function NotificationsPage() {
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm font-semibold text-[var(--color-text-heading)]">Live feed</div>
-            <div className="text-xs text-[var(--color-text-muted)]">New events appear in real time.</div>
+            <div className="text-xs text-[var(--color-text-muted)]">Filter by category; new events appear in real time.</div>
           </div>
         </div>
         <div className="mt-3">
-          <NotificationFeed userId={user.id} initial={feedItems} />
+          <NotificationFilterFeed userId={user.id} initial={feedItems} />
         </div>
       </section>
     </div>
