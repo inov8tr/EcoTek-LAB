@@ -228,6 +228,8 @@ model User {
   name                      String
   displayName               String?
   avatarUrl                 String?
+  bannerUrl                 String?
+  handle                    String?           @unique
   pronouns                  String?
   bio                       String?
   locale                    String?           @default("en-US")

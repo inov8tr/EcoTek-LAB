@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
-import { LogOut, Settings, User } from "lucide-react";
+import { LogOut, Settings, User, HelpCircle, Globe, Moon, Sun, Laptop } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import type { CurrentUser } from "@/lib/auth-helpers";
 
@@ -46,6 +46,23 @@ export function UserMenu({ user }: { user: CurrentUser }) {
           <div className="border-t border-border">
             <MenuItem href={"/account" as Route} icon={<User className="h-4 w-4" />} label="Account" onSelect={() => setOpen(false)} />
             <MenuItem href={"/settings" as Route} icon={<Settings className="h-4 w-4" />} label="Settings" onSelect={() => setOpen(false)} />
+            <MenuItem href={"/resources/user-guide" as Route} icon={<HelpCircle className="h-4 w-4" />} label="Help / Support" onSelect={() => setOpen(false)} />
+            <Divider />
+            <div className="px-3 py-2">
+              <p className="text-xs font-semibold text-[var(--color-text-muted)]">Theme</p>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                <ToggleChip label="Light" icon={<Sun className="h-4 w-4" />} />
+                <ToggleChip label="Dark" icon={<Moon className="h-4 w-4" />} />
+                <ToggleChip label="System" icon={<Laptop className="h-4 w-4" />} />
+              </div>
+            </div>
+            <div className="px-3 py-2">
+              <p className="text-xs font-semibold text-[var(--color-text-muted)]">Language</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <ToggleChip label="EN" icon={<Globe className="h-4 w-4" />} />
+                <ToggleChip label="KO" icon={<Globe className="h-4 w-4" />} />
+              </div>
+            </div>
             <form action={logout} className="border-t border-border">
               <button
                 type="submit"
@@ -83,6 +100,22 @@ function MenuItem({
       {icon}
       <span>{label}</span>
     </Link>
+  );
+}
+
+function Divider() {
+  return <div className="border-t border-border" />;
+}
+
+function ToggleChip({ label, icon }: { label: string; icon: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      className="flex items-center justify-center gap-1 rounded-lg border border-border bg-[var(--color-bg-alt)] px-2 py-1 text-[11px] font-semibold text-[var(--color-text-heading)] hover:bg-[var(--color-bg-alt)]/70"
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
   );
 }
 

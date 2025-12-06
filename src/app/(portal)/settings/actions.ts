@@ -32,6 +32,8 @@ export async function updateProfile(formData: FormData) {
     data: {
       displayName: (formData.get("displayName") ?? "").toString().trim() || null,
       avatarUrl: (formData.get("avatarUrl") ?? "").toString().trim() || null,
+      bannerUrl: (formData.get("bannerUrl") ?? "").toString().trim() || null,
+      handle: (formData.get("handle") ?? "").toString().trim() || null,
       pronouns: (formData.get("pronouns") ?? "").toString().trim() || null,
       bio: (formData.get("bio") ?? "").toString().trim() || null,
       locale: (formData.get("locale") ?? "").toString().trim() || "en-US",

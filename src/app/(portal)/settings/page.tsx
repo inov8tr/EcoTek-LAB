@@ -31,6 +31,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       email: true,
       displayName: true,
       avatarUrl: true,
+      bannerUrl: true,
+      handle: true,
       pronouns: true,
       bio: true,
       locale: true,
@@ -90,6 +92,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <div className="grid gap-4 sm:grid-cols-2">
               <InputField name="displayName" label="Display name" defaultValue={fullUser?.displayName ?? ""} />
               <InputField name="avatarUrl" label="Avatar URL" defaultValue={fullUser?.avatarUrl ?? ""} />
+              <InputField name="bannerUrl" label="Banner URL" defaultValue={fullUser?.bannerUrl ?? ""} />
+              <InputField name="handle" label="Handle / username" defaultValue={fullUser?.handle ?? ""} />
               <InputField name="pronouns" label="Pronouns" defaultValue={fullUser?.pronouns ?? ""} />
               <InputField name="locale" label="Language/locale" defaultValue={fullUser?.locale ?? "en-US"} />
               <InputField name="timeZone" label="Time zone" defaultValue={fullUser?.timeZone ?? "UTC"} />

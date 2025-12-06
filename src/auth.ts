@@ -95,6 +95,8 @@ export const {
           status: user.status,
           displayName: user.displayName,
           avatarUrl: user.avatarUrl,
+          bannerUrl: user.bannerUrl,
+          handle: user.handle,
           pronouns: user.pronouns,
           bio: user.bio,
           locale: user.locale,
@@ -114,6 +116,8 @@ export const {
         token.status = (user as { status?: UserStatus }).status;
         token.displayName = (user as any).displayName ?? null;
         token.avatarUrl = (user as any).avatarUrl ?? null;
+        token.bannerUrl = (user as any).bannerUrl ?? null;
+        token.handle = (user as any).handle ?? null;
         token.pronouns = (user as any).pronouns ?? null;
         token.bio = (user as any).bio ?? null;
         token.locale = (user as any).locale ?? null;
@@ -141,6 +145,8 @@ export const {
         session.user.status = (token.status as UserStatus) ?? UserStatus.PENDING;
         session.user.displayName = (token as any).displayName ?? null;
         session.user.avatarUrl = (token as any).avatarUrl ?? null;
+        session.user.bannerUrl = (token as any).bannerUrl ?? null;
+        session.user.handle = (token as any).handle ?? null;
         session.user.pronouns = (token as any).pronouns ?? null;
         session.user.bio = (token as any).bio ?? null;
         session.user.locale = (token as any).locale ?? null;

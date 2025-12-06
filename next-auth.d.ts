@@ -10,6 +10,8 @@ declare module "next-auth" {
       status: UserStatus;
       displayName?: string | null;
       avatarUrl?: string | null;
+      bannerUrl?: string | null;
+      handle?: string | null;
       pronouns?: string | null;
       bio?: string | null;
       locale?: string | null;
@@ -28,6 +30,8 @@ declare module "next-auth" {
     status: UserStatus;
     displayName?: string | null;
     avatarUrl?: string | null;
+    bannerUrl?: string | null;
+    handle?: string | null;
     pronouns?: string | null;
     bio?: string | null;
     locale?: string | null;
@@ -45,6 +49,8 @@ declare module "next-auth/jwt" {
     status?: UserStatus;
     displayName?: string | null;
     avatarUrl?: string | null;
+    bannerUrl?: string | null;
+    handle?: string | null;
     pronouns?: string | null;
     bio?: string | null;
     locale?: string | null;
