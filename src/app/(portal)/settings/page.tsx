@@ -150,6 +150,36 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           </div>
         </section>
 
+        <section className="rounded-2xl border border-border bg-white p-6 shadow-sm space-y-3">
+          <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Notifications</h2>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            Control which alerts you receive. Email toggles are stored; push and in-app are coming soon.
+          </p>
+          <form action={toggleLoginAlerts} className="space-y-3">
+            <label className="flex items-center gap-2 text-sm text-[var(--color-text-heading)]">
+              <input
+                id="notify-email"
+                name="loginAlerts"
+                type="checkbox"
+                defaultChecked={!!fullUser?.loginAlerts}
+                className="h-4 w-4"
+              />
+              <span>Email alerts for new logins</span>
+            </label>
+            <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+              <input type="checkbox" disabled className="h-4 w-4" />
+              <span>Push notifications (coming soon)</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+              <input type="checkbox" disabled className="h-4 w-4" />
+              <span>In-app alerts (coming soon)</span>
+            </div>
+            <button className="rounded-lg bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-white">
+              Save notification prefs
+            </button>
+          </form>
+        </section>
+
         <section className="rounded-2xl border border-border bg-white p-6 shadow-sm space-y-4">
           <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Security</h2>
           <div className="space-y-3">

@@ -20,8 +20,15 @@ export function UserMenu({ user }: { user: CurrentUser }) {
         setOpen(false);
       }
     }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
   }, []);
 
   const initial = user.displayName?.[0] ?? user.name?.[0] ?? user.email?.[0] ?? "U";
@@ -49,13 +56,18 @@ export function UserMenu({ user }: { user: CurrentUser }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="Open account menu"
-        className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white shadow-sm transition hover:shadow-md"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]"
       >
         <AvatarCircle src={user.avatarUrl ?? undefined} alt={user.displayName ?? user.name ?? "User"} fallback={initial} />
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border bg-white shadow-lg ring-1 ring-black/5">
+        <div
+          className="absolute right-0 mt-2 w-56 rounded-xl border border-border bg-white shadow-lg ring-1 ring-black/5"
+          role="menu"
+        >
           <div className="px-4 py-3">
             <div className="text-sm font-semibold text-[var(--color-text-heading)] truncate">
               {user.displayName ?? user.name ?? "Account"}
