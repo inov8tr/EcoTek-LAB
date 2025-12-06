@@ -1,3 +1,4 @@
+import fs from "fs";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import mime from "mime-types";
@@ -83,17 +84,26 @@ export async function POST(req: NextRequest) {
 
     // Catalog documents in DB
     const docsData = [
-      ...(fileMeta.pdf ? [{ originalName: pdfFile?.name ?? "report.pdf", storedPath: fileMeta.pdf, mimeType: pdfFile?.type, sizeBytes: pdfFile?.size ?? null }] : []),
+      ...(fileMeta.pdf
+        ? [
+            {
+              originalName: pdfFile?.name ?? "report.pdf",
+              storedPath: fileMeta.pdf,
+              mimeType: pdfFile?.type ?? (mime.lookup(fileMeta.pdf) || null),
+              sizeBytes: pdfFile?.size ?? null,
+            },
+          ]
+        : []),
       ...fileMeta.photos.map((p, idx) => ({
         originalName: photos[idx]?.name ?? `photo-${idx + 1}`,
         storedPath: p,
-        mimeType: photos[idx]?.type ?? mime.lookup(p) || null,
+        mimeType: photos[idx]?.type ?? (mime.lookup(p) || null),
         sizeBytes: photos[idx]?.size ?? null,
       })),
       ...fileMeta.videos.map((p, idx) => ({
         originalName: videos[idx]?.name ?? `video-${idx + 1}`,
         storedPath: p,
-        mimeType: videos[idx]?.type ?? mime.lookup(p) || null,
+        mimeType: videos[idx]?.type ?? (mime.lookup(p) || null),
         sizeBytes: videos[idx]?.size ?? null,
       })),
     ];
@@ -143,60 +153,6 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ id: binderTest.id, folderName });
-  } catch (err) {
-    console.error(err);
-    return new NextResponse("Failed to create binder test", { status: 500 });
-  }
-}
-    const binderTest = await prisma.binderTest.create({
-      data: {
-        ...payload,
-        originalFiles: { pdf: null, photos: [], videos: [] },
-      },
-    });
-
-    const fileMeta: { pdf?: string | null; photos: string[]; videos: string[] } = {
-      pdf: null,
-      photos: [],
-      videos: [],
-    };
-
-    const uploader = async (file: File | Blob, _path: string, kind: "pdf" | "image" | "video") => {
-      // Use existing local uploader (public/uploads). Replace with cloud storage when needed.
-      const url = await uploadBinderAsset(binderTest.id, kind, file as File);
-      return { path: _path, url };
-    };
-
-    if (pdfFile && pdfFile.size > 0) {
-      const { url } = await uploader(pdfFile, "report.pdf", "pdf");
-      fileMeta.pdf = url;
-    }
-
-    for (let i = 0; i < photos.length; i++) {
-      const file = photos[i];
-      if (!file || file.size === 0) continue;
-      const { url } = await uploader(file, `photo-${i + 1}.jpg`, "image");
-      fileMeta.photos.push(url);
-    }
-
-    for (let i = 0; i < videos.length; i++) {
-      const file = videos[i];
-      if (!file || file.size === 0) continue;
-      const { url } = await uploader(file, `video-${i + 1}.mp4`, "video");
-      fileMeta.videos.push(url);
-    }
-
-    await prisma.binderTest.update({
-      where: { id: binderTest.id },
-      data: { originalFiles: fileMeta },
-    });
-
-    // Trigger AI extraction (fire-and-forget)
-    runBinderTestExtraction(binderTest.id).catch((err) =>
-      console.error("Binder test extraction failed", err)
-    );
-
-    return NextResponse.json({ id: binderTest.id });
   } catch (err) {
     console.error(err);
     return new NextResponse("Failed to create binder test", { status: 500 });
