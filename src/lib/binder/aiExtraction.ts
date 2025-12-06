@@ -39,20 +39,18 @@ export async function runAiFallbackExtraction(
         content: [
           {
             type: "input_text",
-            text: `Provide JSON for only these fields: ${fieldsNeeded.join(
-              ", "
-            )}. Null if missing. ${keyHint}`,
+            text: `Provide JSON for only these fields: ${fieldsNeeded.join(", ")}. Null if missing. ${keyHint}`,
           },
           ...base64Inputs.map((b64) => ({
             type: "input_image",
-            image_url: b64,
+            image_url: { url: b64, detail: "auto" },
           })),
-        ],
+        ] as any,
       },
-    ],
+    ] as any,
   });
 
-  const content = (response.output?.[0]?.content as any)?.[0];
+  const content = (response as any)?.output?.[0]?.content?.[0];
   if (!content || content.type !== "output_text") return {};
 
   try {

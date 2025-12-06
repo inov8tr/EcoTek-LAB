@@ -1,6 +1,6 @@
 import path from "path";
 import { NextRequest, NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { BINDER_BASE_PATH } from "@/lib/binder/storage";
@@ -9,14 +9,14 @@ import fs from "fs";
 
 export const runtime = "nodejs";
 
-export async function POST(req: NextRequest, { params }: { params?: { id?: string } }) {
+export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user || (user.role !== UserRole.ADMIN && user.role !== UserRole.RESEARCHER)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
   const searchParams = new URL(req.url).searchParams;
-  const id = params?.id ?? searchParams.get("id");
+  const id = searchParams.get("id");
   if (!id) return new NextResponse("Missing id", { status: 400 });
 
   const binderTest = await prisma.binderTest.findUnique({ where: { id } });
@@ -48,8 +48,10 @@ export async function POST(req: NextRequest, { params }: { params?: { id?: strin
       ductilityCm: extraction.data.ductilityCm,
       recoveryPct: extraction.data.recoveryPct,
       jnr_3_2: extraction.data.jnr_3_2,
-      dsrData: extraction.data.dsrData,
-      aiExtractedData: extraction.usedAi ? { data: extraction.data, sources: extraction.sources } : null,
+      dsrData: extraction.data.dsrData as Prisma.InputJsonValue,
+      aiExtractedData: extraction.usedAi
+        ? ({ data: extraction.data, sources: extraction.sources } as unknown as Prisma.InputJsonValue)
+        : Prisma.DbNull,
       status: "PENDING_REVIEW",
     },
   });
