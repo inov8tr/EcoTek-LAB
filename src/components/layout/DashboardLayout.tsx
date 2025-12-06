@@ -93,6 +93,12 @@ export function DashboardLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--color-bg-main)]">
+      <a
+        href="#main-content"
+        className="absolute left-4 top-4 z-50 -translate-y-16 rounded-md bg-[var(--color-accent-primary)] px-3 py-2 text-xs font-semibold text-white shadow focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-offset-2"
+      >
+        Skip to content
+      </a>
       <div
         className="transition-[padding] pr-4 sm:pr-6 lg:pr-8"
         style={{ paddingLeft: "var(--sidebar-offset)" }}
@@ -104,8 +110,10 @@ export function DashboardLayout({
         <Sidebar userName={currentUser.name ?? currentUser.email ?? "User"} userRole={currentUser.role} />
 
         <main
+          id="main-content"
           className="flex-1 min-h-0 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 transition-[padding]"
           style={{ paddingLeft: "var(--sidebar-offset)" }}
+          aria-label="Main content"
         >
           <header className="sticky top-0 z-10 mb-6 rounded-2xl border border-border-subtle bg-white/90 px-4 py-4 backdrop-blur">
             <DashboardBreadcrumbs />

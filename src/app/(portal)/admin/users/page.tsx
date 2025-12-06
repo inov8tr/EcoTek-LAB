@@ -13,18 +13,36 @@ const STATUS_FILTERS: (UserStatus | "ALL")[] = ["ALL", "PENDING", "ACTIVE", "SUS
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams?: { status?: string };
+  searchParams?: { status?: string; q?: string; role?: string };
 }) {
   await requireRole([UserRole.ADMIN]);
   const statusParam = searchParams?.status?.toUpperCase() ?? "ALL";
   const activeFilter = STATUS_FILTERS.includes(statusParam as UserStatus | "ALL")
     ? statusParam
     : "ALL";
+  const q = searchParams?.q?.toLowerCase().trim() ?? "";
+  const roleParam = searchParams?.role?.toUpperCase() ?? "";
   const where =
-    activeFilter === "ALL" ? {} : { status: activeFilter as UserStatus };
+    activeFilter === "ALL"
+      ? {}
+      : { status: activeFilter as UserStatus };
+
+  const roleFilter = roleParam && Object.values(UserRole).includes(roleParam as UserRole) ? (roleParam as UserRole) : null;
 
   const users = await prisma.user.findMany({
-    where,
+    where: {
+      ...where,
+      ...(roleFilter ? { role: roleFilter } : {}),
+      ...(q
+        ? {
+            OR: [
+              { email: { contains: q, mode: "insensitive" } },
+              { name: { contains: q, mode: "insensitive" } },
+              { displayName: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -45,7 +63,7 @@ export default async function AdminUsersPage({
         </Link>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2" aria-label="Filter by status">
         {STATUS_FILTERS.map((filter) => {
           const isActive = activeFilter === filter;
           const href =
@@ -72,8 +90,60 @@ export default async function AdminUsersPage({
         })}
       </div>
 
+      <form className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-white p-3 shadow-sm" method="get">
+        <div className="flex items-center gap-2">
+          <label htmlFor="q" className="text-sm font-semibold text-[var(--color-text-heading)]">Search</label>
+          <input
+            id="q"
+            name="q"
+            defaultValue={q}
+            placeholder="Name or email"
+            className="w-56 rounded-lg border border-border px-3 py-2 text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="role" className="text-sm font-semibold text-[var(--color-text-heading)]">Role</label>
+          <select
+            id="role"
+            name="role"
+            defaultValue={roleFilter ?? ""}
+            className="rounded-lg border border-border px-3 py-2 text-sm"
+          >
+            <option value="">All</option>
+            {Object.values(UserRole).map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Button type="submit" variant="outline" size="sm">
+          Apply
+        </Button>
+        {(q || roleFilter) && (
+          <Link href={"/admin/users" as Route} className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-heading)]">
+            Clear
+          </Link>
+        )}
+        <div className="ml-auto">
+          <Link
+            href={{
+              pathname: "/api/admin/users/export",
+              query: {
+                status: activeFilter !== "ALL" ? activeFilter.toLowerCase() : undefined,
+                role: roleFilter ?? undefined,
+                q: q || undefined,
+              },
+            }}
+            className="text-sm font-semibold text-[var(--color-text-link)] underline-offset-4 hover:underline"
+          >
+            Export CSV
+          </Link>
+        </div>
+      </form>
+
       <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-sm">
-        <table className="w-full table-auto text-sm">
+        <table className="w-full table-auto text-sm" aria-label="Users table">
           <thead className="text-left text-[var(--color-text-muted)]">
             <tr>
               <th className="px-4 py-3 font-semibold">Name</th>

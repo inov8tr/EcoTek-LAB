@@ -11,6 +11,7 @@ interface DataTableProps<T> {
   data: T[];
   className?: string;
   emptyMessage?: string;
+  ariaLabel?: string;
 }
 
 export function DataTable<T extends object>({
@@ -18,6 +19,7 @@ export function DataTable<T extends object>({
   data,
   className,
   emptyMessage = "No records found.",
+  ariaLabel,
 }: DataTableProps<T>) {
   return (
     <div className={cn("space-y-4", className)}>
@@ -27,11 +29,11 @@ export function DataTable<T extends object>({
         </div>
       )}
       <div className="hidden overflow-x-auto rounded-2xl border border-border md:block">
-        <table className="w-full table-auto border-separate border-spacing-y-2 text-left">
+        <table className="w-full table-auto border-separate border-spacing-y-2 text-left" aria-label={ariaLabel}>
           <thead>
             <tr className="text-sm text-[var(--color-text-muted)]">
               {columns.map((column) => (
-                <th key={column.key as string} className="px-4 pb-2 font-medium">
+                <th key={column.key as string} className="px-4 pb-2 font-medium" scope="col">
                   {column.header}
                 </th>
               ))}

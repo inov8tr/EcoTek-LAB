@@ -77,6 +77,11 @@ export default async function TablePage({ params, searchParams }: PageProps) {
         <Button asChild variant="outline">
           <Link href={"/admin/database" as Route}>Back to tables</Link>
         </Button>
+        <Button asChild variant="ghost">
+          <Link href={`/api/admin/database/${encodeURIComponent(tableParam)}/export` as Route}>
+            Export CSV
+          </Link>
+        </Button>
       </div>
 
       <TableViewer

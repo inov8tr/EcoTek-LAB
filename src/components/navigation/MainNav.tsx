@@ -12,7 +12,7 @@ export function MainNav({ currentUser, unreadCount = 0 }: { currentUser: Current
   const { allowSwitching } = useViewMode();
 
   return (
-    <header className="sticky top-0 z-40 mx-4 rounded-2xl border border-border-subtle bg-white/80 shadow-[0_10px_40px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+    <header className="sticky top-0 z-40 mx-4 rounded-2xl border border-border-subtle bg-white/80 shadow-[0_10px_40px_rgba(15,23,42,0.08)] backdrop-blur-xl" aria-label="Global navigation">
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-8 py-8">
         <Link
           href={"/dashboard" as Route}

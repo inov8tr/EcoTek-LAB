@@ -4,6 +4,7 @@ import { requireStatus } from "@/lib/auth-helpers";
 import { UserRole, UserStatus } from "@prisma/client";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { prisma } from "@/lib/prisma";
+import { NotificationsStream } from "./notifications/stream";
 
 export default async function PortalLayout({
   children,
@@ -24,6 +25,7 @@ export default async function PortalLayout({
       <ViewModeBanner />
       <DashboardLayout currentUser={currentUser} unreadCount={unreadCount}>
         {children}
+        <NotificationsStream userId={currentUser.id} />
       </DashboardLayout>
     </ViewModeProvider>
   );

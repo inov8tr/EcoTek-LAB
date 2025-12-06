@@ -35,6 +35,22 @@ const resourceSections = [
       "We log requests and notify admins.",
     ],
   },
+  {
+    title: "FAQ",
+    description: "Quick answers to common questions about the portal.",
+    links: [
+      {
+        label: "View FAQs",
+        note: "Troubleshooting and how-tos",
+        href: "/resources/faq",
+      },
+    ],
+    details: [
+      "2FA setup and recovery codes",
+      "Password reset steps",
+      "Where to upload documents and export data",
+    ],
+  },
 ];
 
 export default function ResourcesPage() {

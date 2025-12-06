@@ -12,9 +12,11 @@ import { updateQuickPrefs } from "@/app/actions/prefs";
 export function UserMenu({ user, unreadCount = 0 }: { user: CurrentUser; unreadCount?: number }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
+  const firstItemRef = useRef<HTMLAnchorElement | null>(null);
   const [isPending, startTransition] = useTransition();
   const activeTheme = user.theme ?? "system";
   const activeLocale = user.locale ?? "en-US";
+  const menuItemsRefs = useRef<Array<HTMLAnchorElement | null>>([]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -32,6 +34,34 @@ export function UserMenu({ user, unreadCount = 0 }: { user: CurrentUser; unreadC
       document.removeEventListener("keydown", handleKey);
     };
   }, []);
+
+  useEffect(() => {
+    if (open && firstItemRef.current) {
+      firstItemRef.current.focus();
+    }
+  }, [open]);
+
+  function handleMenuKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (!open) return;
+    if (e.key === "Escape") {
+      setOpen(false);
+      return;
+    }
+    if (e.key === "Tab") {
+      const focusables = menuItemsRefs.current.filter(Boolean) as HTMLAnchorElement[];
+      if (focusables.length === 0) return;
+      const currentIndex = focusables.findIndex((el) => el === document.activeElement);
+      if (e.shiftKey) {
+        e.preventDefault();
+        const prev = (currentIndex - 1 + focusables.length) % focusables.length;
+        focusables[prev]?.focus();
+      } else {
+        e.preventDefault();
+        const next = (currentIndex + 1) % focusables.length;
+        focusables[next]?.focus();
+      }
+    }
+  }
 
   const initial = user.displayName?.[0] ?? user.name?.[0] ?? user.email?.[0] ?? "U";
 
@@ -74,6 +104,8 @@ export function UserMenu({ user, unreadCount = 0 }: { user: CurrentUser; unreadC
         <div
           className="absolute right-0 mt-2 w-56 rounded-xl border border-border bg-white shadow-lg ring-1 ring-black/5"
           role="menu"
+          aria-label="Account menu"
+          onKeyDown={handleMenuKeyDown}
         >
           <div className="px-4 py-3">
             <div className="text-sm font-semibold text-[var(--color-text-heading)] truncate">
@@ -82,13 +114,20 @@ export function UserMenu({ user, unreadCount = 0 }: { user: CurrentUser; unreadC
             <div className="text-xs text-[var(--color-text-muted)] truncate">{user.email}</div>
           </div>
           <div className="border-t border-border">
-            <MenuItem href={"/account" as Route} icon={<User className="h-4 w-4" />} label="Account" onSelect={() => setOpen(false)} />
+            <MenuItem
+              href={"/account" as Route}
+              icon={<User className="h-4 w-4" />}
+              label="Account"
+              onSelect={() => setOpen(false)}
+              firstRef={firstItemRef}
+            />
             <MenuItem href={"/settings" as Route} icon={<Settings className="h-4 w-4" />} label="Settings" onSelect={() => setOpen(false)} />
             <MenuItem
               href={"/notifications" as Route}
               icon={<Bell className="h-4 w-4" />}
               label={`Notifications${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
               onSelect={() => setOpen(false)}
+              registerRef={(el) => (menuItemsRefs.current[2] = el)}
             />
             <MenuItem href={"/resources/user-guide" as Route} icon={<HelpCircle className="h-4 w-4" />} label="Help / Support" onSelect={() => setOpen(false)} />
             <Divider />
@@ -159,17 +198,37 @@ function MenuItem({
   label,
   icon,
   onSelect,
+  firstRef,
+  registerRef,
 }: {
   href: Route;
   label: string;
   icon: React.ReactNode;
   onSelect: () => void;
+  firstRef?: React.RefObject<HTMLAnchorElement>;
+  registerRef?: (el: HTMLAnchorElement | null) => void;
 }) {
   return (
     <Link
+      ref={firstRef}
       href={href}
       className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--color-text-heading)] hover:bg-[var(--color-bg-alt)]"
+      role="menuitem"
+      tabIndex={0}
       onClick={onSelect}
+      ref={(el) => {
+        if (firstRef) {
+          // eslint-disable-next-line no-param-reassign
+          (firstRef as any).current = el;
+        }
+        registerRef?.(el);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
     >
       {icon}
       <span>{label}</span>
