@@ -4,6 +4,9 @@ import { RecoveryVsReagent } from "@/components/analytics/RecoveryVsReagent";
 import { EcoCapVsSofteningPoint } from "@/components/analytics/EcoCapVsSofteningPoint";
 import { PgScatterPlot } from "@/components/analytics/PgScatterPlot";
 import { DashboardCard } from "@/components/ui/dashboard-card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import type { Route } from "next";
 
 export default async function AnalyticsPage() {
   const [stability, recovery, ecoCapSoftening, pgImprovement] = await Promise.all([
@@ -20,6 +23,13 @@ export default async function AnalyticsPage() {
         <p className="text-[var(--color-text-muted)]">
           Cross-formula insights for storage stability, recovery, PG performance, and viscosity.
         </p>
+      </div>
+      <div className="flex justify-end">
+        <Button variant="ghost" asChild>
+          <Link href={"/analytics/export" as Route} aria-label="Export analytics source data as CSV">
+            Export source data
+          </Link>
+        </Button>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
