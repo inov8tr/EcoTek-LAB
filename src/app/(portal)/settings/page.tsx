@@ -3,7 +3,7 @@ import { authenticator } from "otplib";
 import { getDatabaseStatus } from "@/lib/db";
 import { requireStatus, getCurrentUser } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { describeUserAgent, describeLocation, formatDateTime } from "@/lib/utils";
+import { describeUserAgent, describeLocation, formatDateTime, lookupGeo } from "@/lib/utils";
 import {
   updateProfile,
   changePassword,
@@ -53,6 +53,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },
   });
+  const sessionGeo = await Promise.all(
+    sessions.map(async (s) => ({
+      id: s.id,
+      geo: await lookupGeo(s.ipAddress),
+    }))
+  );
   const recoveryCodes = await prisma.recoveryCode.findMany({
     where: { userId: user.id, used: false },
     orderBy: { createdAt: "desc" },
@@ -315,6 +321,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           {sessions.map((s) => {
             const isCurrent = s.jti === user.sessionId;
             const deviceLabel = describeUserAgent(s.userAgent);
+            const geo = sessionGeo.find((g) => g.id === s.id)?.geo;
             return (
               <div key={s.id} className="flex items-center justify-between px-4 py-3 text-sm">
                 <div className="space-y-1">
@@ -325,7 +332,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                     Created {new Date(s.createdAt).toLocaleString()} · Last seen {new Date(s.lastSeenAt).toLocaleString()}
                   </div>
                   {s.userAgent && <div className="text-xs text-[var(--color-text-muted)]">{deviceLabel}</div>}
-                  {s.ipAddress && <div className="text-xs text-[var(--color-text-muted)]">{describeLocation(s.ipAddress)}</div>}
+                  {s.ipAddress && (
+                    <div className="text-xs text-[var(--color-text-muted)]">
+                      {describeLocation(s.ipAddress)}
+                      {geo?.country && ` · ${geo.city ? `${geo.city}, ` : ""}${geo.country}`}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {s.revoked && <span className="text-xs text-red-600">Revoked</span>}

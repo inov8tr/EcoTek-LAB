@@ -2,6 +2,7 @@ import { UserStatus } from "@prisma/client";
 import { requireStatus } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/utils";
+import { publishNotification } from "@/lib/realtime";
 import { markAllNotificationsRead, markNotificationRead } from "./actions";
 
 export default async function NotificationsPage() {
@@ -12,6 +13,13 @@ export default async function NotificationsPage() {
     orderBy: { createdAt: "desc" },
     take: 25,
   });
+  // broadcast latest unread count for connected clients
+  if (events.length) {
+    await publishNotification(user.id, {
+      type: "count",
+      unread: events.filter((e) => !e.readAt).length,
+    });
+  }
 
   const securityEvents = events.filter((e) => e.eventType.toLowerCase().includes("login") || e.eventType.toLowerCase().includes("2fa"));
   const accountEvents = events.filter((e) => !securityEvents.includes(e));

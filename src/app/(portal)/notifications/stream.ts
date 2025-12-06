@@ -13,7 +13,7 @@ export function NotificationsStream({ userId }: { userId: string }) {
     const client = new Ably.Realtime({ key });
     const channel = client.channels.get(`user:${userId}`);
     channel.subscribe("notification", (msg) => {
-      if (msg.data?.type === "read" || msg.data?.type === "read_all") {
+      if (msg.data?.type === "read" || msg.data?.type === "read_all" || msg.data?.type === "count") {
         router.refresh();
       }
     });

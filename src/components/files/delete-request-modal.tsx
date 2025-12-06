@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useFocusTrap } from "@/components/ui/focus-trap";
 
 interface DeleteRequestModalProps {
   targetTable: string;
@@ -22,6 +23,7 @@ export function DeleteRequestModal({
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const firstRef = useRef<HTMLButtonElement | null>(null);
   const lastRef = useRef<HTMLButtonElement | null>(null);
+  useFocusTrap(open, [firstRef, lastRef]);
 
   async function submitRequest() {
     if (!reason.trim()) {
@@ -45,33 +47,6 @@ export function DeleteRequestModal({
     setOpen(false);
     router.refresh();
   }
-
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (!open) return;
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setOpen(false);
-      }
-      if (e.key === "Tab") {
-        const focusables = [firstRef.current, lastRef.current].filter(Boolean) as HTMLElement[];
-        if (focusables.length < 2) return;
-        const active = document.activeElement;
-        if (e.shiftKey && active === firstRef.current) {
-          e.preventDefault();
-          lastRef.current?.focus();
-        } else if (!e.shiftKey && active === lastRef.current) {
-          e.preventDefault();
-          firstRef.current?.focus();
-        }
-      }
-    }
-    if (open) {
-      firstRef.current?.focus();
-      document.addEventListener("keydown", handleKey);
-    }
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [open]);
 
   return (
     <>

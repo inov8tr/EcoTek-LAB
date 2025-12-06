@@ -41,28 +41,6 @@ export function UserMenu({ user, unreadCount = 0 }: { user: CurrentUser; unreadC
     }
   }, [open]);
 
-  function handleMenuKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-    if (!open) return;
-    if (e.key === "Escape") {
-      setOpen(false);
-      return;
-    }
-    if (e.key === "Tab") {
-      const focusables = menuItemsRefs.current.filter(Boolean) as HTMLAnchorElement[];
-      if (focusables.length === 0) return;
-      const currentIndex = focusables.findIndex((el) => el === document.activeElement);
-      if (e.shiftKey) {
-        e.preventDefault();
-        const prev = (currentIndex - 1 + focusables.length) % focusables.length;
-        focusables[prev]?.focus();
-      } else {
-        e.preventDefault();
-        const next = (currentIndex + 1) % focusables.length;
-        focusables[next]?.focus();
-      }
-    }
-  }
-
   const initial = user.displayName?.[0] ?? user.name?.[0] ?? user.email?.[0] ?? "U";
 
   function changePrefs(theme?: string, locale?: string) {
@@ -105,7 +83,23 @@ export function UserMenu({ user, unreadCount = 0 }: { user: CurrentUser; unreadC
           className="absolute right-0 mt-2 w-56 rounded-xl border border-border bg-white shadow-lg ring-1 ring-black/5"
           role="menu"
           aria-label="Account menu"
-          onKeyDown={handleMenuKeyDown}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setOpen(false);
+            if (e.key === "Tab") {
+              const focusables = menuItemsRefs.current.filter(Boolean) as HTMLAnchorElement[];
+              if (focusables.length === 0) return;
+              const currentIndex = focusables.findIndex((el) => el === document.activeElement);
+              if (e.shiftKey) {
+                e.preventDefault();
+                const prev = (currentIndex - 1 + focusables.length) % focusables.length;
+                focusables[prev]?.focus();
+              } else {
+                e.preventDefault();
+                const next = (currentIndex + 1) % focusables.length;
+                focusables[next]?.focus();
+              }
+            }
+          }}
         >
           <div className="px-4 py-3">
             <div className="text-sm font-semibold text-[var(--color-text-heading)] truncate">
