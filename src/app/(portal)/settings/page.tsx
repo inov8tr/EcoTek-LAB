@@ -10,6 +10,9 @@ import {
   verifyTwoFactor,
   disableTwoFactor,
   revokeSession,
+  revokeAllSessions,
+  regenerateRecoveryCodes,
+  generateVerificationLink,
 } from "./actions";
 
 type SettingsPageProps = {
@@ -36,10 +39,24 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       loginAlerts: true,
       twoFactorEnabled: true,
       twoFactorSecret: true,
+      emailVerified: true,
     },
   });
   const sessions = await prisma.session.findMany({
     where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+  });
+  const recoveryCodes = await prisma.recoveryCode.findMany({
+    where: { userId: user.id, used: false },
+    orderBy: { createdAt: "desc" },
+  });
+  const securityEvents = await prisma.securityEvent.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+  });
+  const latestVerifyToken = await prisma.emailVerificationToken.findFirst({
+    where: { userId: user.id, used: false, expiresAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -99,7 +116,29 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <button className="rounded-lg bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-white">
               Save profile
             </button>
-          </form>
+            </form>
+          <div className="mt-4 rounded-2xl border border-border bg-[var(--color-bg-alt)] p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-[var(--color-text-heading)]">Email verification</div>
+                <div className="text-xs text-[var(--color-text-muted)]">
+                  {fullUser?.emailVerified ? "Verified" : "Not verified"}
+                </div>
+                {!fullUser?.emailVerified && latestVerifyToken && (
+                  <div className="mt-2 text-xs text-[var(--color-text-muted)] break-all">
+                    Latest link: <code>/verify-email?token={latestVerifyToken.token}</code>
+                  </div>
+                )}
+              </div>
+              {!fullUser?.emailVerified && (
+                <form action={generateVerificationLink}>
+                  <button className="rounded-lg bg-[var(--color-accent-primary)] px-3 py-2 text-xs font-semibold text-white">
+                    Generate link
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
         </section>
 
         <section className="rounded-2xl border border-border bg-white p-6 shadow-sm space-y-4">
@@ -180,6 +219,29 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               </button>
             </form>
           </div>
+
+          <div className="space-y-3 border-t pt-4">
+            <h3 className="text-sm font-semibold">Recovery codes</h3>
+            {recoveryCodes.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-muted)]">No active recovery codes. Generate a new set.</p>
+            ) : (
+              <div className="rounded-lg border border-border bg-[var(--color-bg-alt)] p-3 text-sm">
+                <p className="text-xs text-[var(--color-text-muted)]">Use a code when you cannot access your 2FA device.</p>
+                <ul className="mt-2 grid grid-cols-2 gap-2 text-sm font-mono">
+                  {recoveryCodes.map((c) => (
+                    <li key={c.id} className="rounded bg-white px-2 py-1 text-center shadow-sm">
+                      {c.code}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <form action={regenerateRecoveryCodes}>
+              <button className="rounded-lg bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-white">
+                Regenerate codes
+              </button>
+            </form>
+          </div>
         </section>
       </div>
 
@@ -219,6 +281,35 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               </div>
             );
           })}
+        </div>
+        {sessions.length > 0 && (
+          <form action={revokeAllSessions} className="mt-3">
+            <button className="rounded-lg bg-red-100 px-4 py-2 text-sm font-semibold text-red-800">
+              Sign out of all sessions
+            </button>
+          </form>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+        <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Security log</h2>
+        <p className="text-sm text-[var(--color-text-muted)]">Recent security-related actions.</p>
+        <div className="mt-3 divide-y rounded-lg border">
+          {securityEvents.length === 0 && <p className="p-4 text-sm text-[var(--color-text-muted)]">No events yet.</p>}
+          {securityEvents.map((e) => (
+            <div key={e.id} className="flex items-center justify-between px-4 py-3 text-sm">
+              <div className="space-y-1">
+                <div className="font-medium text-[var(--color-text-heading)]">{e.eventType}</div>
+                <div className="text-xs text-[var(--color-text-muted)]">
+                  {e.createdAt.toISOString()} {e.detail ? `· ${e.detail}` : ""}
+                </div>
+              </div>
+              <div className="text-xs text-[var(--color-text-muted)] text-right space-y-1">
+                {e.ipAddress && <div>IP: {e.ipAddress}</div>}
+                {e.userAgent && <div className="max-w-[200px] truncate">UA: {e.userAgent}</div>}
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
