@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { authenticator } from "otplib";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { randomUUID } from "crypto";
 
 function redirectWithMessage(message: string, type: "success" | "error" = "success") {
   const params = new URLSearchParams();
@@ -83,6 +84,9 @@ export async function generateTwoFactor() {
     where: { id: user.id },
     data: { twoFactorSecret: secret, twoFactorEnabled: false },
   });
+  await prisma.securityEvent.create({
+    data: { userId: user.id, eventType: "2FA_SECRET", detail: "2FA secret generated" },
+  });
   revalidatePath("/settings");
   redirectWithMessage("2FA secret generated. Scan the new code.");
 }
@@ -105,6 +109,10 @@ export async function verifyTwoFactor(formData: FormData) {
     where: { id: user.id },
     data: { twoFactorEnabled: true },
   });
+  await prisma.securityEvent.create({
+    data: { userId: user.id, eventType: "2FA_ENABLED", detail: "2FA enabled" },
+  });
+  await regenerateRecoveryCodes();
   revalidatePath("/settings");
   redirectWithMessage("2FA enabled");
 }
@@ -114,6 +122,9 @@ export async function disableTwoFactor() {
   await prisma.user.update({
     where: { id: user.id },
     data: { twoFactorEnabled: false, twoFactorSecret: null },
+  });
+  await prisma.securityEvent.create({
+    data: { userId: user.id, eventType: "2FA_DISABLED", detail: "2FA disabled" },
   });
   revalidatePath("/settings");
   redirectWithMessage("2FA disabled");
@@ -127,6 +138,52 @@ export async function revokeSession(formData: FormData) {
     where: { jti, userId: user.id },
     data: { revoked: true, revokedAt: new Date() },
   });
+  await prisma.securityEvent.create({
+    data: { userId: user.id, eventType: "SESSION_REVOKED", detail: `Session revoked ${jti}` },
+  });
   revalidatePath("/settings");
   redirectWithMessage("Session revoked");
+}
+
+export async function revokeAllSessions() {
+  const user = await requireActiveUser();
+  await prisma.session.updateMany({
+    where: { userId: user.id },
+    data: { revoked: true, revokedAt: new Date() },
+  });
+  await prisma.securityEvent.create({
+    data: { userId: user.id, eventType: "SESSIONS_REVOKED", detail: "All sessions revoked" },
+  });
+  revalidatePath("/settings");
+  redirectWithMessage("All sessions revoked");
+}
+
+export async function regenerateRecoveryCodes() {
+  const user = await requireActiveUser();
+  const codes = Array.from({ length: 10 }, () => randomUUID().slice(0, 8).toUpperCase());
+  await prisma.$transaction([
+    prisma.recoveryCode.deleteMany({ where: { userId: user.id } }),
+    prisma.recoveryCode.createMany({
+      data: codes.map((code) => ({ userId: user.id, code })),
+    }),
+    prisma.securityEvent.create({
+      data: { userId: user.id, eventType: "2FA_RECOVERY_REGEN", detail: "Recovery codes regenerated" },
+    }),
+  ]);
+  revalidatePath("/settings");
+  redirectWithMessage("Recovery codes regenerated");
+}
+
+export async function generateVerificationLink() {
+  const user = await requireActiveUser();
+  const token = randomUUID();
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
+  await prisma.emailVerificationToken.create({
+    data: { token, userId: user.id, expiresAt },
+  });
+  await prisma.securityEvent.create({
+    data: { userId: user.id, eventType: "EMAIL_VERIFY_LINK", detail: "Verification link generated" },
+  });
+  revalidatePath("/settings");
+  redirectWithMessage("Verification link generated");
 }

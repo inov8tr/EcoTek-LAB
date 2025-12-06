@@ -21,15 +21,18 @@ export const {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
         totp: { label: "2FA Code", type: "text" },
+        recoveryCode: { label: "Recovery Code", type: "text" },
       },
       async authorize(credentials) {
         const rawEmail = credentials?.email;
         const rawPassword = credentials?.password;
         const rawTotp = credentials?.totp;
+        const rawRecovery = credentials?.recoveryCode;
         const email =
           typeof rawEmail === "string" ? rawEmail.toLowerCase() : "";
         const password = typeof rawPassword === "string" ? rawPassword : "";
         const totp = typeof rawTotp === "string" ? rawTotp : "";
+        const recoveryCode = typeof rawRecovery === "string" ? rawRecovery.trim() : "";
 
         if (!email || !password) {
           throw new Error("INVALID_CREDENTIALS");
@@ -58,12 +61,28 @@ export const {
         }
 
         if (user.twoFactorEnabled) {
-          const { authenticator } = await import("otplib");
-          if (!user.twoFactorSecret) {
-            throw new Error("2FA_MISCONFIGURED");
+          let passed2fa = false;
+          if (totp) {
+            const { authenticator } = await import("otplib");
+            if (!user.twoFactorSecret) {
+              throw new Error("2FA_MISCONFIGURED");
+            }
+            const ok = authenticator.verify({ token: totp, secret: user.twoFactorSecret });
+            if (ok) passed2fa = true;
           }
-          const ok = authenticator.verify({ token: totp, secret: user.twoFactorSecret });
-          if (!ok) {
+          if (!passed2fa && recoveryCode) {
+            const codeRow = await prisma.recoveryCode.findFirst({
+              where: { userId: user.id, code: recoveryCode, used: false },
+            });
+            if (codeRow) {
+              passed2fa = true;
+              await prisma.recoveryCode.update({
+                where: { id: codeRow.id },
+                data: { used: true, usedAt: new Date() },
+              });
+            }
+          }
+          if (!passed2fa) {
             throw new Error("INVALID_TOTP");
           }
         }
@@ -83,6 +102,7 @@ export const {
           theme: user.theme,
           loginAlerts: user.loginAlerts,
           twoFactorEnabled: user.twoFactorEnabled,
+          emailVerified: user.emailVerified,
         };
       },
     }),
@@ -101,6 +121,7 @@ export const {
         token.theme = (user as any).theme ?? "system";
         token.loginAlerts = (user as any).loginAlerts ?? false;
         token.twoFactorEnabled = (user as any).twoFactorEnabled ?? false;
+        token.emailVerified = (user as any).emailVerified ?? null;
         token.sessionId = token.sessionId ?? randomUUID();
         // Persist session for active user
         prisma.session

@@ -17,6 +17,7 @@ declare module "next-auth" {
       theme?: string | null;
       loginAlerts?: boolean;
       twoFactorEnabled?: boolean;
+      emailVerified?: Date | null;
       sessionId?: string | null;
     };
   }
@@ -34,6 +35,7 @@ declare module "next-auth" {
     theme?: string | null;
     loginAlerts?: boolean;
     twoFactorEnabled?: boolean;
+    emailVerified?: Date | null;
   }
 }
 
@@ -50,6 +52,7 @@ declare module "next-auth/jwt" {
     theme?: string | null;
     loginAlerts?: boolean;
     twoFactorEnabled?: boolean;
+    emailVerified?: Date | null;
     sessionId?: string | null;
   }
 }

@@ -43,6 +43,7 @@ export async function authenticate(
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const totp = String(formData.get("totp") ?? "");
+  const recoveryCode = String(formData.get("recoveryCode") ?? "");
   const redirectTo = String(formData.get("redirectTo") ?? "/dashboard");
 
   if (!email || !password) {
@@ -67,6 +68,7 @@ export async function authenticate(
       email,
       password,
       totp,
+      recoveryCode,
       redirectTo: redirectTo as Route,
     });
   } catch (error) {
