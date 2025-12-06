@@ -6,6 +6,7 @@ import type { Route } from "next";
 import { RoleViewSwitcher } from "./RoleViewSwitcher";
 import { useViewMode } from "@/context/view-mode-context";
 import type { CurrentUser } from "@/lib/auth-helpers";
+import { UserMenu } from "./UserMenu";
 
 export function MainNav({ currentUser }: { currentUser: CurrentUser }) {
   const { allowSwitching } = useViewMode();
@@ -42,16 +43,11 @@ export function MainNav({ currentUser }: { currentUser: CurrentUser }) {
               {currentUser.role}
             </p>
             <p className="text-sm font-semibold text-[var(--color-text-heading)]">
-              {currentUser.name ?? currentUser.email}
+              {currentUser.displayName ?? currentUser.name ?? currentUser.email}
             </p>
           </div>
 
-          <Link
-            href={"/account" as Route}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-[var(--color-bg-alt)] text-base font-semibold text-[var(--color-text-heading)] shadow-sm"
-          >
-            {currentUser.name?.[0]?.toUpperCase() ?? "U"}
-          </Link>
+          <UserMenu user={currentUser} />
        </div>
      </div>
    </header>
