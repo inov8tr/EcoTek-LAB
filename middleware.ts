@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextResponse, type NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 const PUBLIC_PATHS = ["/login", "/signup", "/api/auth", "/favicon", "/icon", "/apple-icon"];
 const ADMIN_PATHS = ["/admin", "/settings"];
@@ -12,9 +12,17 @@ function requiresAdmin(pathname: string) {
   return ADMIN_PATHS.some((path) => pathname === path || pathname.startsWith(path));
 }
 
-export default auth((req) => {
+export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const user = req.auth?.user;
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+  const user =
+    token && typeof token === "object"
+      ? {
+          status: (token as any).status as string | undefined,
+          role: (token as any).role as string | undefined,
+        }
+      : null;
 
   if (isPublic(pathname)) {
     if (
@@ -35,7 +43,7 @@ export default auth((req) => {
 
   if (user.status !== "ACTIVE") {
     const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("message", user.status.toLowerCase());
+    loginUrl.searchParams.set("message", user.status?.toLowerCase() ?? "inactive");
     return NextResponse.redirect(loginUrl);
   }
 
@@ -44,7 +52,7 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|ico)|api/public).*)"],
