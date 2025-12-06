@@ -3,7 +3,7 @@ import { authenticator } from "otplib";
 import { getDatabaseStatus } from "@/lib/db";
 import { requireStatus, getCurrentUser } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { describeUserAgent, formatDateTime } from "@/lib/utils";
+import { describeUserAgent, describeLocation, formatDateTime } from "@/lib/utils";
 import {
   updateProfile,
   changePassword,
@@ -325,7 +325,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                     Created {new Date(s.createdAt).toLocaleString()} · Last seen {new Date(s.lastSeenAt).toLocaleString()}
                   </div>
                   {s.userAgent && <div className="text-xs text-[var(--color-text-muted)]">{deviceLabel}</div>}
-                  {s.ipAddress && <div className="text-xs text-[var(--color-text-muted)]">IP: {s.ipAddress}</div>}
+                  {s.ipAddress && <div className="text-xs text-[var(--color-text-muted)]">{describeLocation(s.ipAddress)}</div>}
                 </div>
                 <div className="flex items-center gap-2">
                   {s.revoked && <span className="text-xs text-red-600">Revoked</span>}

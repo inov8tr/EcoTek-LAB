@@ -54,3 +54,11 @@ export function describeUserAgent(ua: string | null | undefined) {
   const os = isMac ? "macOS" : isWindows ? "Windows" : isLinux ? "Linux" : "Unknown OS";
   return `${isMobile ? "Mobile" : "Desktop"} · ${browser} · ${os}`;
 }
+
+export function describeLocation(ip: string | null | undefined) {
+  if (!ip) return "Unknown location";
+  if (ip.startsWith("10.") || ip.startsWith("192.168.") || ip.startsWith("172.16.")) {
+    return "Private network";
+  }
+  return `IP ${ip}`;
+}
