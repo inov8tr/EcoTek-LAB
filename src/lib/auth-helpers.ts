@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { UserRole, UserStatus } from "@prisma/client";
 import { sendMail, isEmailEnabled } from "@/lib/mailer";
 import { describeUserAgent } from "@/lib/utils";
+import { recordEvent } from "@/lib/events";
 
 export type CurrentUser = {
   id: string;
@@ -73,16 +74,14 @@ async function enforceSession(user: CurrentUser) {
   const ua = hdrs.get("user-agent") ?? session.userAgent ?? null;
   const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? session.ipAddress ?? null;
   if (!session.loginNotified && user.loginAlerts) {
-    await prisma.securityEvent.create({
-      data: {
-        userId: user.id,
-        eventType: "LOGIN_ALERT",
-        detail: describeUserAgent(ua),
-        ipAddress: ip,
-        userAgent: ua,
-        category: "security",
-        channel: isEmailEnabled() ? "email" : "in-app",
-      },
+    await recordEvent({
+      userId: user.id,
+      eventType: "LOGIN_ALERT",
+      detail: describeUserAgent(ua),
+      ipAddress: ip,
+      userAgent: ua,
+      category: "security",
+      channel: isEmailEnabled() ? "email" : "in-app",
     });
     if (isEmailEnabled() && user.email) {
       const body = `New sign-in detected.\n\nIP: ${ip ?? "unknown"}\nDevice: ${describeUserAgent(ua)}\nTime: ${new Date().toISOString()}`;

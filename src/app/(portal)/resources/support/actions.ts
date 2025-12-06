@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireStatus } from "@/lib/auth-helpers";
-import { prisma } from "@/lib/prisma";
 import { UserStatus } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { sendMail, isEmailEnabled } from "@/lib/mailer";
+import { recordEvent } from "@/lib/events";
 
 function redirectWithMessage(type: "success" | "error", message: string) {
   const params = new URLSearchParams();
@@ -31,15 +32,13 @@ export async function submitSupportRequest(formData: FormData) {
     },
   });
 
-  await prisma.securityEvent.create({
-    data: {
-      userId: user.id,
-      eventType: "SUPPORT_REQUEST",
-      detail: subject,
-      category: "system",
-      channel: isEmailEnabled() ? "email" : "in-app",
-      link: `/resources/support`,
-    },
+  await recordEvent({
+    userId: user.id,
+    eventType: "SUPPORT_REQUEST",
+    detail: subject,
+    category: "system",
+    channel: isEmailEnabled() ? "email" : "in-app",
+    link: `/resources/support`,
   });
 
   if (isEmailEnabled()) {
