@@ -24,6 +24,12 @@ function mapAuthError(error: AuthError): string {
     if (causeMessage === "SUSPENDED") {
       return "This account has been suspended. Contact an administrator.";
     }
+    if (causeMessage === "INVALID_TOTP") {
+      return "Invalid 2FA code.";
+    }
+    if (causeMessage === "2FA_MISCONFIGURED") {
+      return "2FA is misconfigured for this account. Contact an administrator.";
+    }
     return INVALID_MESSAGE;
   }
 
@@ -36,6 +42,7 @@ export async function authenticate(
 ): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const totp = String(formData.get("totp") ?? "");
   const redirectTo = String(formData.get("redirectTo") ?? "/dashboard");
 
   if (!email || !password) {
@@ -59,6 +66,7 @@ export async function authenticate(
     await signIn("credentials", {
       email,
       password,
+      totp,
       redirectTo: redirectTo as Route,
     });
   } catch (error) {

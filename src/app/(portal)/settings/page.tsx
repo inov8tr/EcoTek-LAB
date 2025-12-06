@@ -1,41 +1,303 @@
-import { UserRole } from "@prisma/client";
+import { UserRole, UserStatus } from "@prisma/client";
 import { getDatabaseStatus } from "@/lib/db";
-import { requireRole } from "@/lib/auth-helpers";
+import { requireStatus, getCurrentUser } from "@/lib/auth-helpers";
+import { prisma } from "@/lib/prisma";
+import {
+  updateProfile,
+  changePassword,
+  toggleLoginAlerts,
+  generateTwoFactor,
+  verifyTwoFactor,
+  disableTwoFactor,
+  revokeSession,
+} from "./actions";
 
-export default async function SettingsPage() {
-  await requireRole([UserRole.ADMIN]);
+type SettingsPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function SettingsPage({ searchParams }: SettingsPageProps) {
+  const params = await searchParams;
+  const user = await requireStatus(UserStatus.ACTIVE);
   const dbStatus = await getDatabaseStatus();
+  const fullUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      displayName: true,
+      avatarUrl: true,
+      pronouns: true,
+      bio: true,
+      locale: true,
+      timeZone: true,
+      theme: true,
+      loginAlerts: true,
+      twoFactorEnabled: true,
+      twoFactorSecret: true,
+    },
+  });
+  const sessions = await prisma.session.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const success = typeof params.success === "string" ? params.success : null;
+  const error = typeof params.error === "string" ? params.error : null;
+  const isAdmin = user.role === UserRole.ADMIN;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-[var(--color-text-heading)]">Settings</h1>
-        <p className="text-[var(--color-text-muted)]">
-          Configure integrations, database connections, and notification policies.
-        </p>
+        <p className="text-[var(--color-text-muted)]">Manage your account, security, and preferences.</p>
+      </div>
+
+      {(success || error) && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            success
+              ? "border-green-200 bg-green-50 text-green-800"
+              : "border-red-200 bg-red-50 text-red-800"
+          }`}
+        >
+          {success ?? error}
+        </div>
+      )}
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Profile</h2>
+          <form action={updateProfile} className="mt-4 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <InputField name="displayName" label="Display name" defaultValue={fullUser?.displayName ?? ""} />
+              <InputField name="avatarUrl" label="Avatar URL" defaultValue={fullUser?.avatarUrl ?? ""} />
+              <InputField name="pronouns" label="Pronouns" defaultValue={fullUser?.pronouns ?? ""} />
+              <InputField name="locale" label="Language/locale" defaultValue={fullUser?.locale ?? "en-US"} />
+              <InputField name="timeZone" label="Time zone" defaultValue={fullUser?.timeZone ?? "UTC"} />
+              <SelectField
+                name="theme"
+                label="Theme"
+                defaultValue={fullUser?.theme ?? "system"}
+                options={[
+                  { value: "system", label: "System" },
+                  { value: "light", label: "Light" },
+                  { value: "dark", label: "Dark" },
+                ]}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text-heading)]">Bio</label>
+              <textarea
+                name="bio"
+                defaultValue={fullUser?.bio ?? ""}
+                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+                rows={3}
+              />
+            </div>
+            <button className="rounded-lg bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-white">
+              Save profile
+            </button>
+          </form>
+        </section>
+
+        <section className="rounded-2xl border border-border bg-white p-6 shadow-sm space-y-4">
+          <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Security</h2>
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold">Change password</h3>
+            <form action={changePassword} className="space-y-3">
+              <InputField name="currentPassword" label="Current password" type="password" />
+              <InputField name="newPassword" label="New password" type="password" />
+              <button className="rounded-lg bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-white">
+                Update password
+              </button>
+            </form>
+          </div>
+
+          <div className="space-y-3 border-t pt-4">
+            <h3 className="text-sm font-semibold">Two-Factor Authentication</h3>
+            {fullUser?.twoFactorEnabled ? (
+              <form action={disableTwoFactor} className="space-y-2">
+                <p className="text-sm text-[var(--color-text-muted)]">2FA is enabled. You can disable it below.</p>
+                <button className="rounded-lg bg-red-100 px-4 py-2 text-sm font-semibold text-red-800">
+                  Disable 2FA
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  Enable 2FA to add a TOTP code requirement at login. Generate a secret, scan it in your authenticator app, then verify.
+                </p>
+                {!fullUser?.twoFactorSecret && (
+                  <form action={generateTwoFactor}>
+                    <button className="rounded-lg bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-white">
+                      Generate 2FA secret
+                    </button>
+                  </form>
+                )}
+                {fullUser?.twoFactorSecret && (
+                  <div className="space-y-2 rounded-lg border border-border bg-[var(--color-bg-alt)] p-3 text-sm">
+                    <div>
+                      <span className="font-semibold">Secret:</span>{" "}
+                      <code className="break-all">{fullUser.twoFactorSecret}</code>
+                    </div>
+                    <div className="text-xs text-[var(--color-text-muted)]">
+                      Add this secret or its QR code to your authenticator app, then enter the 6-digit code to verify.
+                    </div>
+                    <form action={verifyTwoFactor} className="flex items-center gap-2">
+                      <input
+                        name="code"
+                        placeholder="123456"
+                        required
+                        className="w-32 rounded border border-border px-2 py-1 text-sm"
+                      />
+                      <button className="rounded-lg bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-white">
+                        Verify & enable
+                      </button>
+                    </form>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3 border-t pt-4">
+            <h3 className="text-sm font-semibold">Login alerts</h3>
+            <form action={toggleLoginAlerts} className="flex items-center gap-2">
+              <input
+                id="loginAlerts"
+                name="loginAlerts"
+                type="checkbox"
+                defaultChecked={!!fullUser?.loginAlerts}
+                className="h-4 w-4"
+              />
+              <label htmlFor="loginAlerts" className="text-sm text-[var(--color-text-heading)]">
+                Email me when a new login occurs
+              </label>
+              <button className="ml-auto rounded-lg bg-[var(--color-accent-primary)] px-3 py-2 text-xs font-semibold text-white">
+                Save
+              </button>
+            </form>
+          </div>
+        </section>
       </div>
 
       <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Database</h2>
-        <p className="text-sm text-[var(--color-text-muted)]">
-          PostgreSQL connection string is read from <code>DATABASE_URL</code>.
-        </p>
-        <div className="mt-4 flex items-center justify-between rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3">
-          <div>
-            <p className="text-sm font-semibold text-[var(--color-text-heading)]">Status</p>
-            <p className="text-sm text-[var(--color-text-muted)]">{dbStatus.message}</p>
-          </div>
-          <span
-            className={`rounded-full px-4 py-1 text-xs font-semibold ${
-              dbStatus.connected
-                ? "bg-[var(--color-status-pass-bg)] text-[var(--color-status-pass-text)]"
-                : "bg-[var(--color-status-fail-bg)] text-[var(--color-status-fail-text)]"
-            }`}
-          >
-            {dbStatus.connected ? "Connected" : "Offline"}
-          </span>
+        <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Active sessions</h2>
+        <p className="text-sm text-[var(--color-text-muted)]">Revoke sessions to sign out devices.</p>
+        <div className="mt-3 divide-y rounded-lg border">
+          {sessions.length === 0 && <p className="p-4 text-sm text-[var(--color-text-muted)]">No sessions found.</p>}
+          {sessions.map((s) => {
+            const isCurrent = s.jti === user.sessionId;
+            return (
+              <div key={s.id} className="flex items-center justify-between px-4 py-3 text-sm">
+                <div className="space-y-1">
+                  <div className="font-medium text-[var(--color-text-heading)]">
+                    {isCurrent ? "Current session" : "Session"}
+                  </div>
+                  <div className="text-xs text-[var(--color-text-muted)]">
+                    Created {s.createdAt.toISOString()} · Last seen {s.lastSeenAt.toISOString()}
+                  </div>
+                  {s.userAgent && <div className="text-xs text-[var(--color-text-muted)]">UA: {s.userAgent}</div>}
+                  {s.ipAddress && <div className="text-xs text-[var(--color-text-muted)]">IP: {s.ipAddress}</div>}
+                </div>
+                <div className="flex items-center gap-2">
+                  {s.revoked && <span className="text-xs text-red-600">Revoked</span>}
+                  {!s.revoked && (
+                    <form action={revokeSession}>
+                      <input type="hidden" name="sessionId" value={s.jti} />
+                      <button
+                        className="rounded bg-red-100 px-3 py-1 text-xs font-semibold text-red-800 disabled:opacity-50"
+                        disabled={isCurrent}
+                      >
+                        Revoke
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
+
+      {isAdmin && (
+        <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Database</h2>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            PostgreSQL connection string is read from <code>DATABASE_URL</code>.
+          </p>
+          <div className="mt-4 flex items-center justify-between rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-[var(--color-text-heading)]">Status</p>
+              <p className="text-sm text-[var(--color-text-muted)]">{dbStatus.message}</p>
+            </div>
+            <span
+              className={`rounded-full px-4 py-1 text-xs font-semibold ${
+                dbStatus.connected
+                  ? "bg-[var(--color-status-pass-bg)] text-[var(--color-status-pass-text)]"
+                  : "bg-[var(--color-status-fail-bg)] text-[var(--color-status-fail-text)]"
+              }`}
+            >
+              {dbStatus.connected ? "Connected" : "Offline"}
+            </span>
+          </div>
+        </section>
+      )}
     </div>
+  );
+}
+
+function InputField({
+  name,
+  label,
+  defaultValue,
+  type = "text",
+}: {
+  name: string;
+  label: string;
+  defaultValue?: string;
+  type?: string;
+}) {
+  return (
+    <label className="space-y-1 text-sm text-[var(--color-text-heading)]">
+      <span className="font-medium">{label}</span>
+      <input
+        name={name}
+        type={type}
+        defaultValue={defaultValue}
+        className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+      />
+    </label>
+  );
+}
+
+function SelectField({
+  name,
+  label,
+  defaultValue,
+  options,
+}: {
+  name: string;
+  label: string;
+  defaultValue?: string;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <label className="space-y-1 text-sm text-[var(--color-text-heading)]">
+      <span className="font-medium">{label}</span>
+      <select
+        name={name}
+        defaultValue={defaultValue}
+        className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

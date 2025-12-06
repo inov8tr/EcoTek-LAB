@@ -226,6 +226,16 @@ model User {
   email                     String            @unique
   passwordHash              String
   name                      String
+  displayName               String?
+  avatarUrl                 String?
+  pronouns                  String?
+  bio                       String?
+  locale                    String?           @default("en-US")
+  timeZone                  String?           @default("UTC")
+  theme                     String?           @default("system") // light | dark | system
+  loginAlerts               Boolean           @default(false)
+  twoFactorEnabled          Boolean           @default(false)
+  twoFactorSecret           String?
   role                      UserRole          @default(VIEWER)
   status                    UserStatus        @default(PENDING)
   emailVerified             DateTime?
@@ -236,6 +246,22 @@ model User {
   deletionRequestsReviewed  DeletionRequest[] @relation("ReviewedDeletions")
   CapsuleFormula            CapsuleFormula[]
   PmaBatch                  PmaBatch[]
+  sessions                  Session[]
+}
+
+model Session {
+  id          String   @id @default(uuid())
+  userId      String
+  jti         String   @unique
+  userAgent   String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  revoked     Boolean  @default(false)
+  revokedAt   DateTime?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 enum UserRole {
