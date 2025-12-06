@@ -1,0 +1,456 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Formulation {
+  id                Int                    @id @default(autoincrement())
+  slug              String                 @unique
+  code              String                 @unique
+  name              String
+  description       String?
+  ecoCapPercentage  Float?
+  reagentPercentage Float?
+  bitumenGrade      String?
+  notes             String?
+  targetPgHigh      Int?
+  targetPgLow       Int?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  archived          Boolean                @default(false)
+  archivedAt        DateTime?
+  batches           Batch[]
+  components        FormulationComponent[]
+}
+
+model Material {
+  id          Int                    @id @default(autoincrement())
+  name        String                 @unique
+  description String?
+  components  FormulationComponent[]
+}
+
+model FormulationComponent {
+  id            Int         @id @default(autoincrement())
+  formulation   Formulation @relation(fields: [formulationId], references: [id], onDelete: Cascade)
+  formulationId Int
+  material      Material?   @relation(fields: [materialId], references: [id])
+  materialId    Int?
+  materialName  String
+  percentage    Float
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Batch {
+  id                    Int              @id @default(autoincrement())
+  slug                  String           @unique
+  batchCode             String
+  formulationId         Int
+  dateMixed             DateTime
+  operator              String?
+  rpm                   Int?
+  mixingTempInitial     Float?
+  mixingTempFinal       Float?
+  mixingDurationMinutes Int?
+  mixingNotes           String?
+  mixingCurve           Json?
+  reagentPercentage     Float?
+  status                String? // PASS / FAIL
+  capsuleDosagePct      Float?
+  binderName            String?
+  binderPgHigh          Int?
+  binderPgLow           Int?
+  mixingTempC           Float?
+  mixingTimeMin         Float?
+  shearRpm              Int?
+  testDate              DateTime?
+  labName               String?
+  createdAt             DateTime         @default(now())
+  archived              Boolean          @default(false)
+  archivedAt            DateTime?
+  formulation           Formulation      @relation(fields: [formulationId], references: [id], onDelete: Cascade)
+  attachments           FileAttachment[]
+  testResults           TestResult[]
+
+  @@unique([batchCode])
+}
+
+enum TestOutcome {
+  PASS
+  FAIL
+  PARTIAL
+}
+
+model TestResult {
+  id                 Int         @id @default(autoincrement())
+  batch              Batch       @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batchId            Int
+  label              String?
+  labReportId        String?
+  storabilityPct     Float?
+  solubilityPct      Float?
+  jnr                Float?
+  elasticRecoveryPct Float?
+  softeningPointC    Float?
+  ductilityCm        Float?
+  viscosityPaS       Float?
+  pgHigh             Int?
+  pgLow              Int?
+  temperatureC       Float?
+  remarks            String?
+  overallOutcome     TestOutcome @default(PARTIAL)
+  failedReasons      String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+}
+
+// AI-assisted binder test ingestion
+enum BinderTestStatus {
+  PENDING_REVIEW
+  READY
+  ARCHIVED
+}
+
+model BinderTest {
+  id              String           @id @default(uuid())
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  name            String?
+  testName        String           @default("Untitled Binder Test")
+  folderName      String           @default("legacy-binder-test")
+  pmaFormulaId    String?
+  batchId         String?
+  binderSource    String?
+  operator        String?
+  lab             String?
+  crmPct          Float?
+  reagentPct      Float?
+  aerosilPct      Float?
+  notes           String?
+  pgHigh          Int?
+  pgLow           Int?
+  softeningPointC Float?
+  viscosity155_cP Float?
+  ductilityCm     Float?
+  recoveryPct     Float?
+  jnr_3_2         Float?
+  dsrData         Json?
+  originalFiles   Json
+  aiExtractedData Json?
+  aiConfidence    Float?
+  manualEdits     Json?
+  status          BinderTestStatus @default(PENDING_REVIEW)
+  pmaFormula      PmaFormula?      @relation(fields: [pmaFormulaId], references: [id], onDelete: SetNull)
+  documents       BinderTestDocument[]
+}
+
+model BinderTestDocument {
+  id             String     @id @default(uuid())
+  binderTestId   String
+  referenceNumber String?
+  testNumber     String?
+  originalName   String
+  storedPath     String
+  mimeType       String?
+  sizeBytes      Int?
+  hash           String?
+  createdAt      DateTime   @default(now())
+  binderTest     BinderTest @relation(fields: [binderTestId], references: [id], onDelete: Cascade)
+}
+
+// Binder Test Data module (separate from existing BinderTest tied to batches)
+model BinderTestData {
+  id             String                 @id @default(uuid())
+  testName       String
+  batchId        String?
+  binderSource   String?
+  crmPercent     Float?
+  reagentPercent Float?
+  aerosilPercent Float?
+  operator       String?
+  lab            String?
+  status         String                 @default("Pending")
+  notes          String?
+  createdAt      DateTime               @default(now())
+
+  results        BinderTestDataResult[]
+  files          BinderTestDataFile[]
+  media          BinderTestDataMedia[]
+}
+
+model BinderTestDataResult {
+  id           String          @id @default(uuid())
+  binderTestId String
+  temperature  Float?
+  gOriginal    Float?
+  gRtfo        Float?
+  gPav         Float?
+  pgHigh       Int?
+  pgLow        Int?
+  passFail     String?
+  notes        String?
+  createdAt    DateTime        @default(now())
+
+  binderTest   BinderTestData  @relation(fields: [binderTestId], references: [id], onDelete: Cascade)
+}
+
+model BinderTestDataFile {
+  id           String         @id @default(uuid())
+  binderTestId String
+  fileUrl      String
+  fileType     String
+  label        String?
+  createdAt    DateTime       @default(now())
+
+  binderTest   BinderTestData @relation(fields: [binderTestId], references: [id], onDelete: Cascade)
+}
+
+model BinderTestDataMedia {
+  id           String         @id @default(uuid())
+  binderTestId String
+  mediaUrl     String
+  mediaType    String
+  label        String?
+  createdAt    DateTime       @default(now())
+
+  binderTest   BinderTestData @relation(fields: [binderTestId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id                        String            @id @default(uuid())
+  email                     String            @unique
+  passwordHash              String
+  name                      String
+  role                      UserRole          @default(VIEWER)
+  status                    UserStatus        @default(PENDING)
+  emailVerified             DateTime?
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+  uploadedFiles             FileAttachment[]
+  deletionRequestsRequested DeletionRequest[] @relation("RequestedDeletions")
+  deletionRequestsReviewed  DeletionRequest[] @relation("ReviewedDeletions")
+  CapsuleFormula            CapsuleFormula[]
+  PmaBatch                  PmaBatch[]
+}
+
+enum UserRole {
+  ADMIN
+  RESEARCHER
+  VIEWER
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum DeleteStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model FileAttachment {
+  id           Int         @id @default(autoincrement())
+  fileName     String
+  mimeType     String
+  size         Int
+  url          String
+  storagePath  String
+  uploadedById String
+  batchId      Int?
+  createdAt    DateTime    @default(now())
+  uploader     User        @relation(fields: [uploadedById], references: [id])
+  batch        Batch?      @relation(fields: [batchId], references: [id], onDelete: Cascade)
+}
+
+model DeletionRequest {
+  id          Int          @id @default(autoincrement())
+  targetTable String
+  targetId    String
+  reason      String
+  status      DeleteStatus @default(PENDING)
+  requesterId String
+  reviewerId  String?
+  createdAt   DateTime     @default(now())
+  resolvedAt  DateTime?
+  requester   User         @relation("RequestedDeletions", fields: [requesterId], references: [id])
+  reviewer    User?        @relation("ReviewedDeletions", fields: [reviewerId], references: [id])
+}
+
+model TestStandard {
+  id                    Int      @id @default(autoincrement())
+  name                  String   @unique
+  description           String?
+  maxStorabilityPct     Float?
+  minSolubilityPct      Float?
+  maxJnr                Float?
+  minElasticRecoveryPct Float?
+  minSofteningPointC    Float?
+  minDuctilityCm        Float?
+  maxViscosityPaS       Float?
+  minPgHigh             Int?
+  maxPgLow              Int?
+  isDefault             Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model Market {
+  id        Int        @id @default(autoincrement())
+  code      String     @unique
+  name      String
+  standards Standard[]
+}
+
+model Standard {
+  id           Int                   @id @default(autoincrement())
+  code         String                @unique
+  name         String
+  description  String?
+  marketId     Int
+  market       Market                @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  requirements StandardRequirement[]
+}
+
+model StandardRequirement {
+  id           Int    @id @default(autoincrement())
+  standardId   Int
+  metric       String
+  comparison   RequirementComparison
+  thresholdMin Float?
+  thresholdMax Float?
+  unit         String?
+  notes        String?
+  standard     Standard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+}
+
+enum RequirementComparison {
+  LTE
+  GTE
+  BETWEEN
+}
+
+model CapsuleFormula {
+  id          String                   @id @default(uuid())
+  name        String
+  description String?
+  createdById String?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  createdBy   User?                    @relation(fields: [createdById], references: [id])
+  materials   CapsuleFormulaMaterial[]
+  pmaFormulas PmaFormula[]
+}
+
+model CapsuleFormulaMaterial {
+  id               String         @id @default(uuid())
+  capsuleFormulaId String
+  materialName     String
+  percentage       Float
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  capsuleFormula   CapsuleFormula @relation(fields: [capsuleFormulaId], references: [id], onDelete: Cascade)
+}
+
+model BitumenOrigin {
+  id            String            @id @default(uuid())
+  refineryName  String
+  binderGrade   String
+  originCountry String
+  description   String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  baseTests     BitumenBaseTest[]
+  pmaFormulas   PmaFormula[]
+}
+
+model BitumenBaseTest {
+  id              String        @id @default(uuid())
+  bitumenOriginId String
+  batchCode       String
+  softeningPoint  Float?
+  penetration     Float?
+  viscosity135    Float?
+  viscosity165    Float?
+  basePgHigh      Int?
+  basePgLow       Int?
+  baseDuctility   Float?
+  baseRecovery    Float?
+  notes           String?
+  testedAt        DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  bitumenOrigin   BitumenOrigin @relation(fields: [bitumenOriginId], references: [id], onDelete: Cascade)
+  pmaFormulas     PmaFormula[]
+}
+
+model PmaFormula {
+  id                   String          @id @default(uuid())
+  name                 String          @default("PMA Formula")
+  capsuleFormulaId     String
+  bitumenOriginId      String
+  bitumenTestId        String?
+  ecoCapPercentage     Float
+  reagentPercentage    Float
+  mixRpm               Int?
+  mixTimeMinutes       Float?
+  pmaTargetPgHigh      Int?
+  pmaTargetPgLow       Int?
+  bitumenGradeOverride String?
+  notes                String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  capsuleFormula       CapsuleFormula  @relation(fields: [capsuleFormulaId], references: [id], onDelete: Cascade)
+  bitumenOrigin        BitumenOrigin   @relation(fields: [bitumenOriginId], references: [id], onDelete: Cascade)
+  bitumenTest          BitumenBaseTest? @relation(fields: [bitumenTestId], references: [id], onDelete: SetNull)
+  batches              PmaBatch[]
+  binderTests          BinderTest[]
+}
+
+model PmaBatch {
+  id           String          @id @default(uuid())
+  pmaFormulaId String
+  batchCode    String
+  sampleDate   DateTime?
+  testedById   String?
+  notes        String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  pmaFormula   PmaFormula      @relation(fields: [pmaFormulaId], references: [id], onDelete: Cascade)
+  testedBy     User?           @relation(fields: [testedById], references: [id])
+  testResults  PmaTestResult[]
+
+  @@unique([batchCode])
+}
+
+model PmaTestResult {
+  id                         String   @id @default(uuid())
+  pmaBatchId                 String
+  softeningPoint             Float?
+  viscosity135               Float?
+  viscosity165               Float?
+  ductility                  Float?
+  elasticRecovery            Float?
+  storageStabilityDifference Float?
+  pgHigh                     Int?
+  pgLow                      Int?
+  dsrOriginalTemp            Float?
+  dsrOriginalGOverSin        Float?
+  dsrRtfoTemp                Float?
+  dsrRtfoGOverSin            Float?
+  dsrPavTemp                 Float?
+  dsrPavGTimesSin            Float?
+  bbrTemp                    Float?
+  bbrStiffness               Float?
+  bbrMValue                  Float?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  pmaBatch                   PmaBatch @relation(fields: [pmaBatchId], references: [id], onDelete: Cascade)
+}
