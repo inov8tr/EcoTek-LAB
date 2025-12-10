@@ -10,15 +10,17 @@ import { gatewayTimeline, spotlightTasks } from "@/lib/data";
 import { getDatabaseStatus } from "@/lib/db";
 import { getDashboardData } from "@/lib/data-service";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { getPythonServiceHealth } from "@/lib/services/python-client";
 
 export default async function DashboardPage() {
   const dbStatus = await getDatabaseStatus();
+  const pythonHealthy = await getPythonServiceHealth();
   const currentUser = await getCurrentUser();
   const isAdmin = currentUser?.role === "ADMIN";
 
   return (
     <div className="space-y-10">
-      <section className="rounded-[32px] border border-border bg-white/70 p-8 shadow-lg shadow-indigo-100 backdrop-blur-xl">
+      <section className="rounded-md border border-brand-primary/30 bg-brand-primary/5 p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.6em] text-[var(--color-text-muted)]">
@@ -39,15 +41,8 @@ export default async function DashboardPage() {
             <span className="rounded-full border border-border px-4 py-2">
               6 Active Pipelines
             </span>
-            <span
-              className={`rounded-full px-4 py-2 ${
-                dbStatus.connected
-                  ? "bg-[var(--color-status-pass-bg)] text-[var(--color-status-pass-text)] border border-[var(--color-status-pass-bg)]"
-                  : "bg-[var(--color-status-fail-bg)] text-[var(--color-status-fail-text)] border border-[var(--color-status-fail-bg)]"
-              }`}
-            >
-              PostgreSQL: {dbStatus.connected ? "Connected" : "Offline"}
-            </span>
+            <StatusPill label="PostgreSQL" healthy={dbStatus.connected} />
+            <StatusPill label="Python Engine" healthy={pythonHealthy} healthyLabel="Online" unhealthyLabel="Unavailable" />
           </div>
         </div>
       </section>
@@ -131,7 +126,7 @@ async function DashboardData({ isAdmin }: { isAdmin: boolean }) {
             {gatewayTimeline.map((event) => (
               <li
                 key={event.title}
-                className="flex items-start gap-4 rounded-2xl border border-border bg-white/80 p-4"
+                className="flex items-start gap-4 rounded-md border border-neutral-200 bg-white p-4 shadow-sm"
               >
                 <div className="text-sm font-semibold text-[var(--color-text-muted)]">
                   {event.time}
@@ -151,7 +146,7 @@ async function DashboardData({ isAdmin }: { isAdmin: boolean }) {
             {spotlightTasks.map((task) => (
               <article
                 key={task.title}
-                className="rounded-2xl border border-border bg-white/80 p-4 shadow-sm"
+                className="rounded-md border border-neutral-200 bg-white p-4 shadow-sm"
               >
                 <p className="text-xs font-semibold uppercase tracking-[0.4em] text-[var(--color-text-muted)]">
                   {task.badge}
@@ -171,7 +166,7 @@ async function DashboardData({ isAdmin }: { isAdmin: boolean }) {
         <ChartCard title="Compliance snapshot" description="Latest test status across configured standards">
           <div className="grid gap-3 md:grid-cols-3">
             {complianceSummary.map((item: { standard: string; status: string }) => (
-              <div key={item.standard} className="rounded-2xl border border-border/60 p-3">
+              <div key={item.standard} className="rounded-md border border-neutral-200 bg-white p-3 shadow-sm">
                 <p className="text-sm font-semibold text-[var(--color-text-heading)]">{item.standard}</p>
                 <div className="mt-2">
                   <StatusBadge status={item.status === "pending" ? "on-track" : (item.status as "pass" | "fail")} />
@@ -208,7 +203,7 @@ function DashboardSkeleton() {
         {[...Array(3)].map((_, idx) => (
           <div
             key={`metric-skeleton-${idx}`}
-            className="h-32 rounded-2xl border border-border bg-[var(--color-bg-alt)] animate-pulse"
+            className="h-32 rounded-md border border-border bg-[var(--color-bg-alt)] animate-pulse"
           />
         ))}
       </div>
@@ -216,10 +211,33 @@ function DashboardSkeleton() {
         {[...Array(2)].map((_, idx) => (
           <div
             key={`chart-skeleton-${idx}`}
-            className="h-80 rounded-2xl border border-border bg-[var(--color-bg-alt)] animate-pulse"
+            className="h-80 rounded-md border border-border bg-[var(--color-bg-alt)] animate-pulse"
           />
         ))}
       </div>
     </div>
+  );
+}
+
+function StatusPill({
+  label,
+  healthy,
+  healthyLabel = "Connected",
+  unhealthyLabel = "Offline",
+}: {
+  label: string;
+  healthy: boolean;
+  healthyLabel?: string;
+  unhealthyLabel?: string;
+}) {
+  const base = "rounded-full px-4 py-2 border";
+  const healthyClasses =
+    "bg-[var(--color-status-pass-bg)] text-[var(--color-status-pass-text)] border-[var(--color-status-pass-bg)]";
+  const unhealthyClasses =
+    "bg-[var(--color-status-fail-bg)] text-[var(--color-status-fail-text)] border-[var(--color-status-fail-bg)]";
+  return (
+    <span className={`${base} ${healthy ? healthyClasses : unhealthyClasses}`}>
+      {label}: {healthy ? healthyLabel : unhealthyLabel}
+    </span>
   );
 }

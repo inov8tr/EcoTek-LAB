@@ -89,7 +89,7 @@ export function PmaBatchForm({
               value={form.batchCode}
               onChange={(e) => handleChange("batchCode", e.target.value)}
               placeholder="e.g. PMA-2025-01"
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm"
             />
           </label>
           <label className="space-y-1 text-xs font-semibold text-[var(--color-text-heading)]">
@@ -98,7 +98,7 @@ export function PmaBatchForm({
               type="date"
               value={form.sampleDate ?? ""}
               onChange={(e) => handleChange("sampleDate", e.target.value)}
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm"
             />
           </label>
         </div>
@@ -108,7 +108,7 @@ export function PmaBatchForm({
             value={form.notes ?? ""}
             onChange={(e) => handleChange("notes", e.target.value)}
             rows={3}
-            className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-3 text-sm"
+            className="w-full rounded-xl border border-border-subtle bg-white px-4 py-3 text-sm"
           />
         </label>
       </DashboardCard>
@@ -200,7 +200,7 @@ function NumberField({
         type="number"
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full rounded-2xl border px-4 py-2 text-sm ${
+        className={`w-full rounded-xl border px-4 py-2 text-sm ${
           warning
             ? "border-red-500 bg-red-50 text-red-700"
             : "border-border-subtle bg-white text-[var(--color-text-heading)]"

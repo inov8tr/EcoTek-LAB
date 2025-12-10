@@ -63,7 +63,7 @@ export default async function PmaListPage({
           defaultValue={q}
           className="w-64 text-sm outline-none"
         />
-        <Button type="submit" variant="outline" size="sm">
+        <Button type="submit" variant="secondary" size="sm">
           Apply
         </Button>
         {q && (

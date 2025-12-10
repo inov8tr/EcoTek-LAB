@@ -66,14 +66,14 @@ const markdownComponents: Components = {
     inline ? (
       <code className="rounded bg-[var(--color-bg-alt)]/80 px-1 py-0.5 text-xs font-semibold">{children}</code>
     ) : (
-      <pre className="overflow-x-auto rounded-2xl bg-[var(--color-bg-alt)]/80 p-4 text-xs leading-relaxed">
+      <pre className="overflow-x-auto rounded-xl bg-[var(--color-bg-alt)]/80 p-4 text-xs leading-relaxed">
         <code>{children}</code>
       </pre>
     ),
   hr: () => <hr className="my-6 border-dashed border-[var(--color-border-subtle)]" />,
   table: ({ children }) => (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse rounded-2xl border border-border text-sm">{children}</table>
+      <table className="w-full border-collapse rounded-xl border border-border text-sm">{children}</table>
     </div>
   ),
   thead: ({ children }) => (

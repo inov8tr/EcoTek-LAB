@@ -90,7 +90,7 @@ export default async function AdminUsersPage({
         })}
       </div>
 
-      <form className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-white p-3 shadow-sm" method="get">
+      <form className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-white p-3 shadow-sm" method="get">
         <div className="flex items-center gap-2">
           <label htmlFor="q" className="text-sm font-semibold text-[var(--color-text-heading)]">Search</label>
           <input
@@ -117,7 +117,7 @@ export default async function AdminUsersPage({
             ))}
           </select>
         </div>
-        <Button type="submit" variant="outline" size="sm">
+        <Button type="submit" variant="secondary" size="sm">
           Apply
         </Button>
         {(q || roleFilter) && (
@@ -143,7 +143,7 @@ export default async function AdminUsersPage({
         </div>
       </form>
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-xl border border-border bg-white shadow-sm">
         <table className="w-full table-auto text-sm" aria-label="Users table">
           <thead className="text-left text-[var(--color-text-muted)]">
             <tr>
@@ -185,7 +185,7 @@ export default async function AdminUsersPage({
                       <form action={updateUserStatus}>
                         <input type="hidden" name="userId" value={user.id} />
                         <input type="hidden" name="status" value="ACTIVE" />
-                        <Button type="submit" variant="outline" className="rounded-full px-3 py-1 text-xs">
+                        <Button type="submit" variant="secondary" className="rounded-full px-3 py-1 text-xs">
                           Approve
                         </Button>
                       </form>

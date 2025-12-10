@@ -34,7 +34,7 @@ export default function FAQPage() {
         {FAQS.map((item) => (
           <details
             key={item.q}
-            className="rounded-2xl border border-border bg-white p-4 shadow-sm"
+            className="rounded-xl border border-border bg-white p-4 shadow-sm"
           >
             <summary className="cursor-pointer text-sm font-semibold text-[var(--color-text-heading)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-primary)]">
               {item.q}

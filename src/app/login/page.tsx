@@ -36,14 +36,14 @@ export default async function LoginPage({
         </div>
 
         {statusMessage && (
-          <div className="rounded-2xl border border-[var(--color-status-fail-bg)] bg-[var(--color-status-fail-bg)]/40 px-4 py-3 text-sm text-[var(--color-status-fail-text)]">
+          <div className="rounded-xl border border-[var(--color-status-fail-bg)] bg-[var(--color-status-fail-bg)]/40 px-4 py-3 text-sm text-[var(--color-status-fail-text)]">
             {statusMessage}
           </div>
         )}
 
         <LoginForm redirectTo={redirectTo} />
 
-        <div className="rounded-2xl border border-dashed border-border bg-[var(--color-bg-alt)]/80 p-4 text-xs text-[var(--color-text-muted)] text-center">
+        <div className="rounded-xl border border-dashed border-border bg-[var(--color-bg-alt)]/80 p-4 text-xs text-[var(--color-text-muted)] text-center">
           <p>
             Need access?{" "}
             <Link href={"/signup" as Route} className="font-semibold text-[var(--color-text-link)]">

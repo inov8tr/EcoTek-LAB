@@ -14,16 +14,21 @@ function formatDate(date: Date) {
 }
 
 type BinderTestsPageProps = {
-  searchParams?: {
-    q?: string;
-    status?: BinderTestStatus;
-  };
+  searchParams: Promise<{
+    q?: string | string[];
+    status?: string | string[];
+  }>;
 };
 
 export default async function BinderTestsPage({ searchParams }: BinderTestsPageProps) {
   const currentUser = await requireRole([UserRole.ADMIN, UserRole.RESEARCHER]);
-  const q = searchParams?.q?.toString() ?? "";
-  const statusFilter = searchParams?.status;
+  const params = await searchParams;
+  const qParam = params?.q;
+  const q = Array.isArray(qParam) ? qParam[0] ?? "" : qParam ?? "";
+  const statusParam = Array.isArray(params?.status) ? params?.status[0] : params?.status;
+  const statusFilter = statusParam && Object.values(BinderTestStatus).includes(statusParam as BinderTestStatus)
+    ? (statusParam as BinderTestStatus)
+    : undefined;
 
   const where = {
     AND: [
@@ -88,7 +93,7 @@ export default async function BinderTestsPage({ searchParams }: BinderTestsPageP
                 </option>
               ))}
             </select>
-            <Button type="submit" variant="outline" size="sm">
+            <Button type="submit" variant="secondary" size="sm">
               Apply
             </Button>
             {(q || statusFilter) && (
@@ -152,7 +157,7 @@ export default async function BinderTestsPage({ searchParams }: BinderTestsPageP
                       </span>
                     </td>
                     <td className="py-2 px-4">
-                      <Badge variant="outline">{test.status}</Badge>
+                      <Badge variant="secondary">{test.status}</Badge>
                     </td>
                     <td className="py-2 px-4 text-xs text-muted-foreground">{formatDate(test.createdAt)}</td>
                     <td className="py-2 pl-4 text-right">

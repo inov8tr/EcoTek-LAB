@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { UserRole, UserStatus } from "@prisma/client";
 import { authenticator } from "otplib";
 import { getDatabaseStatus } from "@/lib/db";
@@ -21,6 +22,34 @@ import {
 type SettingsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+const TIME_ZONES = [
+  { value: "Pacific/Midway", label: "Midway (UTC-11:00)" },
+  { value: "Pacific/Honolulu", label: "Honolulu (UTC-10:00)" },
+  { value: "America/Anchorage", label: "Anchorage (UTC-09:00)" },
+  { value: "America/Los_Angeles", label: "Los Angeles (UTC-08:00)" },
+  { value: "America/Denver", label: "Denver (UTC-07:00)" },
+  { value: "America/Chicago", label: "Chicago (UTC-06:00)" },
+  { value: "America/New_York", label: "New York (UTC-05:00)" },
+  { value: "America/Caracas", label: "Caracas (UTC-04:00)" },
+  { value: "America/Sao_Paulo", label: "São Paulo (UTC-03:00)" },
+  { value: "Atlantic/Azores", label: "Azores (UTC-01:00)" },
+  { value: "UTC", label: "UTC (GMT+00:00)" },
+  { value: "Europe/London", label: "London (UTC+00:00)" },
+  { value: "Europe/Paris", label: "Paris (UTC+01:00)" },
+  { value: "Europe/Berlin", label: "Berlin (UTC+01:00)" },
+  { value: "Europe/Athens", label: "Athens (UTC+02:00)" },
+  { value: "Africa/Cairo", label: "Cairo (UTC+02:00)" },
+  { value: "Asia/Dubai", label: "Dubai (UTC+04:00)" },
+  { value: "Asia/Karachi", label: "Karachi (UTC+05:00)" },
+  { value: "Asia/Kolkata", label: "India (UTC+05:30)" },
+  { value: "Asia/Bangkok", label: "Bangkok (UTC+07:00)" },
+  { value: "Asia/Shanghai", label: "Shanghai (UTC+08:00)" },
+  { value: "Asia/Tokyo", label: "Tokyo (UTC+09:00)" },
+  { value: "Asia/Seoul", label: "Seoul (UTC+09:00)" },
+  { value: "Australia/Sydney", label: "Sydney (UTC+10:00)" },
+  { value: "Pacific/Auckland", label: "Auckland (UTC+12:00)" },
+];
 
 export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   const params = await searchParams;
@@ -102,17 +131,21 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+        <section className="rounded-xl border border-border bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Profile</h2>
           <form action={updateProfile} className="mt-4 space-y-4">
+            <input type="hidden" name="currentAvatarUrl" value={fullUser?.avatarUrl ?? ""} />
             <div className="grid gap-4 sm:grid-cols-2">
               <InputField name="displayName" label="Display name" defaultValue={fullUser?.displayName ?? ""} />
-              <InputField name="avatarUrl" label="Avatar URL" defaultValue={fullUser?.avatarUrl ?? ""} />
-              <InputField name="bannerUrl" label="Banner URL" defaultValue={fullUser?.bannerUrl ?? ""} />
               <InputField name="handle" label="Handle / username" defaultValue={fullUser?.handle ?? ""} />
-              <InputField name="pronouns" label="Pronouns" defaultValue={fullUser?.pronouns ?? ""} />
+              <InputField name="bannerUrl" label="Banner URL" defaultValue={fullUser?.bannerUrl ?? ""} />
               <InputField name="locale" label="Language/locale" defaultValue={fullUser?.locale ?? "en-US"} />
-              <InputField name="timeZone" label="Time zone" defaultValue={fullUser?.timeZone ?? "UTC"} />
+              <SelectField
+                name="timeZone"
+                label="Time zone"
+                defaultValue={fullUser?.timeZone ?? "UTC"}
+                options={TIME_ZONES}
+              />
               <SelectField
                 name="theme"
                 label="Theme"
@@ -123,6 +156,62 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   { value: "dark", label: "Dark" },
                 ]}
               />
+              <div className="space-y-3 text-sm text-[var(--color-text-heading)] sm:col-span-2">
+                <span className="font-medium">Profile picture</span>
+                <div className="flex flex-wrap items-start gap-4">
+                  <label className="inline-flex cursor-pointer items-center justify-center rounded-md border border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100 focus-within:ring-2 focus-within:ring-brand-primary/30">
+                    <input
+                      type="file"
+                      name="avatarFile"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          const img = document.getElementById("avatar-preview") as HTMLImageElement | null;
+                          const label = document.getElementById("avatar-placeholder");
+                          if (img && typeof reader.result === "string") {
+                            img.src = reader.result;
+                            img.classList.remove("hidden");
+                          }
+                          label?.classList.add("hidden");
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                    <span>Select image</span>
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-neutral-100 text-xs text-neutral-500">
+                      {fullUser?.avatarUrl ? (
+                        <Image
+                          src={fullUser.avatarUrl}
+                          alt="Current avatar"
+                          width={96}
+                          height={96}
+                          className="h-full w-full object-cover"
+                          id="avatar-preview"
+                        />
+                      ) : (
+                        <>
+                          <Image
+                            src="/placeholder-avatar.png"
+                            alt="New avatar preview"
+                            id="avatar-preview"
+                            width={96}
+                            height={96}
+                            className="hidden h-full w-full object-cover"
+                          />
+                          <span id="avatar-placeholder">No photo</span>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-xs text-[var(--color-text-muted)]">Upload a square JPG or PNG under 2 MB.</p>
+                  </div>
+                </div>
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium text-[var(--color-text-heading)]">Bio</label>
@@ -141,7 +230,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               Save profile
             </button>
           </form>
-          <div className="mt-4 rounded-2xl border border-border bg-[var(--color-bg-alt)] p-4">
+          <div className="mt-4 rounded-xl border border-border bg-[var(--color-bg-alt)] p-4">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-[var(--color-text-heading)]">Email verification</div>
@@ -165,7 +254,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           </div>
         </section>
 
-        <section className="rounded-2xl border border-border bg-white p-6 shadow-sm space-y-3">
+        <section className="rounded-xl border border-border bg-white p-6 shadow-sm space-y-3">
           <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Notifications</h2>
           <p className="text-sm text-[var(--color-text-muted)]">
             Control which alerts you receive. Email toggles are stored; push and in-app are coming soon.
@@ -195,7 +284,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           </form>
         </section>
 
-        <section className="rounded-2xl border border-border bg-white p-6 shadow-sm space-y-4">
+        <section className="rounded-xl border border-border bg-white p-6 shadow-sm space-y-4">
           <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Security</h2>
           <div className="space-y-3">
             <h3 className="text-sm font-semibold">Change password</h3>
@@ -314,7 +403,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         </section>
       </div>
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-border bg-white p-6 shadow-sm">
         <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Active sessions</h2>
         <p className="text-sm text-[var(--color-text-muted)]">Revoke sessions to sign out devices.</p>
         <div className="mt-3 divide-y rounded-lg border">
@@ -367,7 +456,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         )}
       </section>
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-border bg-white p-6 shadow-sm">
         <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Security log</h2>
         <p className="text-sm text-[var(--color-text-muted)]">Recent security-related actions.</p>
         <div className="mt-3 divide-y rounded-lg border">
@@ -390,12 +479,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       </section>
 
       {isAdmin && (
-        <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+        <section className="rounded-xl border border-border bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Database</h2>
           <p className="text-sm text-[var(--color-text-muted)]">
             PostgreSQL connection string is read from <code>DATABASE_URL</code>.
           </p>
-          <div className="mt-4 flex items-center justify-between rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3">
+          <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-[var(--color-text-heading)]">Status</p>
               <p className="text-sm text-[var(--color-text-muted)]">{dbStatus.message}</p>

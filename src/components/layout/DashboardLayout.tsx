@@ -1,11 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+
 import { MainNav } from "@/components/navigation/MainNav";
-import { DashboardBreadcrumbs } from "@/components/navigation/DashboardBreadcrumbs";
 import { Sidebar } from "@/components/layout/Sidebar";
 import type { CurrentUser } from "@/lib/auth-helpers";
-import { useEffect } from "react";
+import type { NotificationPreview } from "@/types/notifications";
 
 function getPageMeta(pathname: string) {
   switch (true) {
@@ -17,14 +18,12 @@ function getPageMeta(pathname: string) {
     case pathname.startsWith("/capsules"):
       return {
         title: "Capsule Formulas",
-        description:
-          "Manage EcoCap capsule formulas, parameters, and material experiments.",
+        description: "Manage EcoCap capsule formulas, parameters, and material experiments.",
       };
     case pathname.startsWith("/pma"):
       return {
         title: "PMA Formulas",
-        description:
-          "Combine capsule formulas with bitumen inputs to define PMA candidates.",
+        description: "Combine capsule formulas with bitumen inputs to define PMA candidates.",
       };
     case pathname.startsWith("/bitumen/origins"):
       return {
@@ -44,8 +43,7 @@ function getPageMeta(pathname: string) {
     case pathname.startsWith("/analytics"):
       return {
         title: "Analytics",
-        description:
-          "Visualize storage stability, viscosity, recovery, and PG performance.",
+        description: "Visualize storage stability, viscosity, recovery, and PG performance.",
       };
     case pathname.startsWith("/resources"):
       return {
@@ -74,10 +72,12 @@ export function DashboardLayout({
   children,
   currentUser,
   unreadCount = 0,
+  notifications = [],
 }: {
   children: React.ReactNode;
   currentUser: CurrentUser;
   unreadCount?: number;
+  notifications?: NotificationPreview[];
 }) {
   const pathname = usePathname() || "/dashboard";
   const { title, description } = getPageMeta(pathname);
@@ -92,46 +92,47 @@ export function DashboardLayout({
   }, [currentUser.theme, currentUser.locale]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--color-bg-main)]">
+    <div className="flex min-h-screen flex-col bg-[#E5EAF6] text-neutral-900">
+
+      {/* Accessibility Skip Link */}
       <a
         href="#main-content"
-        className="absolute left-4 top-4 z-50 -translate-y-16 rounded-md bg-[var(--color-accent-primary)] px-3 py-2 text-xs font-semibold text-white shadow focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-offset-2"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-brand-primary focus:px-3 focus:py-2 focus:text-sm focus:text-white"
       >
         Skip to content
       </a>
-      <div
-        className="transition-[padding] pr-4 sm:pr-6 lg:pr-8"
-        style={{ paddingLeft: "var(--sidebar-offset)" }}
-      >
-        <MainNav currentUser={currentUser} unreadCount={unreadCount} />
-      </div>
 
-      <div className="flex flex-1 min-h-0">
-        <Sidebar userName={currentUser.name ?? currentUser.email ?? "User"} userRole={currentUser.role} />
+      {/* TOP NAV */}
+      <MainNav
+        currentUser={currentUser}
+        unreadCount={unreadCount}
+        pageTitle={title}
+        pageDescription={description}
+        notifications={notifications}
+      />
 
+      {/* MAIN APP LAYOUT */}
+      <div className="flex flex-1 overflow-hidden">
+
+        {/* FIXED SIDEBAR */}
+        <Sidebar
+          userName={currentUser.name ?? currentUser.email ?? "User"}
+          userRole={currentUser.role}
+          userCategory={currentUser.role}
+        />
+
+        {/* MAIN CONTENT AREA */}
         <main
           id="main-content"
-          className="flex-1 min-h-0 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 transition-[padding]"
-          style={{ paddingLeft: "var(--sidebar-offset)" }}
-          aria-label="Main content"
+          className="
+            relative flex-1 overflow-y-auto border-l border-neutral-200 bg-white
+            py-6 pr-6
+            pl-[96px]
+            lg:pl-[96px]
+            lg:pr-8
+            shadow-sm
+          "
         >
-          <header className="sticky top-0 z-10 mb-6 rounded-2xl border border-border-subtle bg-white/90 px-4 py-4 backdrop-blur">
-            <DashboardBreadcrumbs />
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h1 className="text-xl font-semibold text-[var(--color-text-heading)]">
-                  {title}
-                </h1>
-                {description && (
-                  <p className="mt-1 text-sm text-[var(--color-text-subtle)]">
-                    {description}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2" />
-            </div>
-          </header>
-
           <div className="space-y-6">{children}</div>
         </main>
       </div>

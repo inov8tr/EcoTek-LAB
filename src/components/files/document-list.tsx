@@ -69,7 +69,7 @@ export function DocumentList({
       {attachments.map((attachment) => (
         <div
           key={attachment.id}
-          className="flex flex-col gap-2 rounded-2xl border border-border bg-white/80 p-4 shadow-sm md:flex-row md:items-center md:justify-between"
+          className="flex flex-col gap-2 rounded-xl border border-border bg-white/80 p-4 shadow-sm md:flex-row md:items-center md:justify-between"
           role="group"
           aria-label={`Attachment ${attachment.fileName}`}
         >

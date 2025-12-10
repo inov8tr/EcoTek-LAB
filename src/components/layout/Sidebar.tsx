@@ -1,260 +1,229 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
+import { Menu, X, ChevronDown } from "lucide-react";
 
-import {
-  LayoutDashboard,
-  Settings,
-  BarChart3,
-  Menu,
-  X,
-  User,
-  Home,
-  ArrowLeft,
-  FileText,
-  ChevronLeft,
-  ChevronRight,
-  Droplets,
-  FlaskConical,
-  TestTube,
-} from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { buildNavForRole, type Role } from "@/components/navigation/nav-config";
 import { LogoutButton } from "@/components/navigation/LogoutButton";
-
-type SidebarItem = {
-  id: string;
-  name: string;
-  href: string;
-  icon: typeof Home;
-  description?: string;
-};
-
-type SidebarModeConfig = {
-  headerButtons: SidebarItem[];
-  navigation: SidebarItem[];
-};
+import { cn } from "@/lib/utils";
+import { HEADER_HEIGHT } from "@/constants/layout";
 
 interface SidebarProps {
   userName: string;
-  userRole: "ADMIN" | "RESEARCHER" | "VIEWER" | string;
+  userRole: Role | string;
   userCategory?: string | null;
-  variant?: "dashboard" | "page";
 }
 
-/* ---------------- GLOBAL NAVIGATION ---------------- */
-const globalNav: SidebarItem[] = [
-  { id: "global-dashboard", name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, description: "Overview of activity" },
-  { id: "global-capsules", name: "Capsule Formulas", href: "/capsules", icon: FlaskConical, description: "Manage EcoCap capsule formulas" },
-  { id: "global-pma", name: "PMA Formulas", href: "/pma", icon: TestTube, description: "Combine capsules and bitumen" },
-  { id: "global-bitumen-origins", name: "Bitumen Origins", href: "/bitumen/origins", icon: Droplets, description: "Refinery sources and suppliers" },
-  { id: "global-binder-tests", name: "Binder Test Data", href: "/binder-tests", icon: FileText, description: "PDFs, photos, videos, results" },
-  { id: "global-analytics", name: "Analytics", href: "/analytics", icon: BarChart3, description: "Reports and insights" },
-  { id: "global-resources", name: "Resources", href: "/resources", icon: FileText, description: "Docs and SOPs" },
-  { id: "global-settings", name: "Settings", href: "/settings", icon: Settings, description: "Configure preferences" },
-];
+const ROLE_FALLBACK: Role = "VIEWER";
 
-/* ---------------- ADMIN NAVIGATION ---------------- */
-const adminNav: SidebarItem[] = [
-  { id: "admin-home", name: "Admin Home", href: "/admin", icon: LayoutDashboard },
-  { id: "admin-users", name: "Users", href: "/admin/users", icon: User },
-  { id: "admin-standards", name: "Standards", href: "/admin/standards", icon: Settings },
-  { id: "admin-settings", name: "System Settings", href: "/admin/settings", icon: Settings },
-  { id: "admin-binder-tests", name: "Binder Test Data", href: "/binder-tests", icon: FileText },
-  { id: "admin-database", name: "Database", href: "/admin/database", icon: Settings },
-];
+function normalizeRole(role: string | Role): Role {
+  if (role === "ADMIN" || role === "RESEARCHER" || role === "VIEWER") {
+    return role;
+  }
+  return ROLE_FALLBACK;
+}
 
-const sidebarModes: Record<"dashboardRoot" | "adminOverview" | "adminPage" | "default", SidebarModeConfig> = {
-  dashboardRoot: {
-    headerButtons: [{ id: "header-dashboard", name: "Dashboard", href: "/dashboard", icon: Home }],
-    navigation: globalNav,
-  },
-  adminOverview: {
-    headerButtons: [{ id: "header-dashboard", name: "Dashboard", href: "/dashboard", icon: Home }],
-    navigation: adminNav,
-  },
-  adminPage: {
-    headerButtons: [
-      { id: "header-dashboard", name: "Dashboard", href: "/dashboard", icon: Home },
-      { id: "header-back-to-admin", name: "Back To Admin", href: "/admin", icon: ArrowLeft },
-    ],
-    navigation: adminNav,
-  },
-  default: {
-    headerButtons: [{ id: "header-dashboard", name: "Dashboard", href: "/dashboard", icon: Home }],
-    navigation: globalNav,
-  },
-};
+export function Sidebar({ userName, userRole, userCategory }: SidebarProps) {
+  const pathname = usePathname() ?? "/dashboard";
 
-export function Sidebar({ userName, userRole, userCategory, variant = "dashboard" }: SidebarProps) {
-  const pathname = usePathname();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
+  // Mobile drawer
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  let modeKey: keyof typeof sidebarModes = "default";
-  if (pathname === "/dashboard") modeKey = "dashboardRoot";
-  else if (pathname === "/admin") modeKey = "adminOverview";
-  else if (pathname?.startsWith("/admin")) modeKey = "adminPage";
+  // Auto-collapse hover behavior
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
-  const { headerButtons, navigation } = sidebarModes[modeKey];
-  const hasHeaderDashboard = headerButtons.some((btn) => btn.href === "/dashboard");
-  const baseNav = hasHeaderDashboard ? navigation.filter((item) => item.href !== "/dashboard") : navigation;
+  const normalizedRole = normalizeRole(userRole);
+  const navSections = useMemo(() => buildNavForRole(normalizedRole), [normalizedRole]);
 
-  const sidebarNavigation =
-    userRole === "VIEWER"
-      ? baseNav.filter((item) => item.id !== "global-binder-tests" && item.id !== "admin-binder-tests")
-      : baseNav;
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const initials = userName?.charAt(0)?.toUpperCase() ?? "U";
 
   useEffect(() => {
-    const root = document.documentElement;
-    const applyOffset = () => {
-      const isDesktop = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
-      const value = isDesktop ? (isDesktopCollapsed ? "3rem" : "20rem") : "0rem";
-      root.style.setProperty("--sidebar-offset", value);
-    };
+    setExpandedSections((prev) => {
+      const next: Record<string, boolean> = {};
+      navSections.forEach((section, idx) => {
+        const key = section.label ?? `section-${idx}`;
+        next[key] = prev[key] ?? true; // sections always expanded inside expanded mode
+      });
+      return next;
+    });
+  }, [navSections]);
 
-    applyOffset();
-    window.addEventListener("resize", applyOffset);
-    return () => {
-      window.removeEventListener("resize", applyOffset);
-      root.style.setProperty("--sidebar-offset", "0rem");
-    };
-  }, [isDesktopCollapsed]);
-
-  const sidebarClasses =
-    variant === "dashboard"
-      ? "top-0 h-screen lg:top-4 lg:h-[calc(100vh-2rem)]"
-      : "top-0 h-screen lg:top-4 lg:h-[calc(100vh-2rem)]";
+  const sidebarWidth = isCollapsed ? "lg:w-20" : "lg:w-64";
 
   return (
     <>
-      {/* MOBILE MENU BUTTON */}
-      <div className="fixed left-4 top-4 z-50 lg:hidden">
-        <Button
-          variant="outline"
-          className="h-10 w-10 p-0 bg-card/90 shadow-lg backdrop-blur-md"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
-      </div>
-
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />
-      )}
-
-      {/* COLLAPSE BUTTON */}
-      <div
-        className="fixed top-4 z-50 hidden lg:block transition-all duration-300"
-        style={{ left: isDesktopCollapsed ? "1rem" : "18rem" }}
+      {/* MOBILE TOGGLE BUTTON */}
+      <button
+        type="button"
+        aria-label={isMobileOpen ? "Close menu" : "Open menu"}
+        className="
+          fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center 
+          rounded-md border border-neutral-200 bg-white text-neutral-700 shadow-sm 
+          hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-brand-primary/30 
+          lg:hidden
+        "
+        onClick={() => setIsMobileOpen((prev) => !prev)}
       >
-        <Button
-          variant="outline"
-          className="h-10 w-10 p-0 bg-card/95 shadow-lg backdrop-blur-md"
-          onClick={() => setIsDesktopCollapsed((prev) => !prev)}
-        >
-          {isDesktopCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-        </Button>
-      </div>
+        {isMobileOpen ? <X className="size-5 text-neutral-600" /> : <Menu className="size-5 text-neutral-600" />}
+      </button>
+
+      {/* MOBILE OVERLAY */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-neutral-900/50 backdrop-blur-sm lg:hidden"
+          aria-hidden="true"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
 
       {/* SIDEBAR */}
       <aside
-        className={`fixed left-0 lg:left-4 z-40 flex w-72 flex-col border border-border/40 bg-card/95 shadow-2xl backdrop-blur-md transition-transform duration-300 lg:rounded-3xl ${
-          sidebarClasses
-        } ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} ${
-          isDesktopCollapsed ? "lg:-translate-x-full" : "lg:translate-x-0"
-        }`}
+        aria-label="Primary navigation"
+        className={cn(
+          `
+          fixed left-0 z-30 
+          flex flex-col 
+          border-r border-neutral-200 bg-white shadow-sm 
+          transition-all duration-200 ease-in-out
+        `,
+          sidebarWidth,
+          // mobile drawer
+          isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
+        style={{
+          top: HEADER_HEIGHT,
+          height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+        }}
+        onMouseEnter={() => setIsCollapsed(false)}
+        onMouseLeave={() => setIsCollapsed(true)}
       >
-        {/* LOGO */}
-        <div className="border-b border-border/40 p-6">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/EcoTek Logo.svg"
-              alt="EcoTek Logo"
-              width={64}
-              height={28}
-              className="h-auto w-auto max-w-[64px]"
-              priority
-            />
-            <p className="text-lg font-semibold opacity-80">Revitalizing the Future</p>
-          </div>
-        </div>
-
-        {/* HEADER BUTTONS */}
-        {headerButtons.length > 0 && (
-          <div className="border-b border-border/40 p-4">
-            <div className="space-y-2">
-              {headerButtons.map((button) => {
-                const Icon = button.icon;
-                return (
-                  <Link key={button.id} href={button.href as Route} onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button variant="outline" className="w-full justify-start gap-2 shadow-sm">
-                      <Icon className="h-4 w-4" />
-                      {button.name}
-                    </Button>
-                  </Link>
-                );
-              })}
-            </div>
+        {/* ONLY SHOW THIS WHEN EXPANDED */}
+        {!isCollapsed && (
+          <div className="border-b border-neutral-200 px-4 py-4">
+            <p className="text-xs uppercase tracking-wide text-neutral-500">Navigation</p>
+            <p className="text-sm font-medium text-neutral-900">Manage console areas</p>
           </div>
         )}
 
-        {/* NAV MENU */}
-        <nav className="flex-1 overflow-y-auto p-4">
-          <ul className="space-y-2">
-            {sidebarNavigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+        {/* NAVIGATION */}
+        <nav className="flex-1 overflow-y-auto py-4">
+          {navSections.map((section, idx) => {
+            const key = section.label ?? `section-${idx}`;
+            const expanded = expandedSections[key] ?? true;
 
-              return (
-                <li key={item.id}>
-                  <Link
-                    href={item.href as Route}
-                    className={`group flex items-start gap-3 rounded-lg border p-4 transition-all duration-200 ${
-                      isActive
-                        ? "border-border/60 bg-accent/60 shadow-md"
-                        : "border-transparent hover:border-border/50 hover:bg-accent/50 hover:shadow-md"
-                    }`}
-                    onClick={() => setIsMobileMenuOpen(false)}
+            return (
+              <div key={key} className="px-2">
+                {/* SECTION LABEL (hidden when collapsed) */}
+                {!isCollapsed && (
+                  <button
+                    type="button"
+                    className="
+                      flex w-full items-center justify-between 
+                      px-2 pt-4 pb-2 
+                      text-[10px] font-medium uppercase tracking-wider 
+                      text-neutral-500 hover:text-neutral-700
+                    "
+                    onClick={() =>
+                      setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }))
+                    }
                   >
-                    <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary transition-transform group-hover:scale-110" />
-                    <div>
-                      <div className="font-semibold text-foreground">{item.name}</div>
-                      {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                    <span>{section.label}</span>
+                    <ChevronDown
+                      className={cn(
+                        "size-4 text-neutral-500 transition-transform",
+                        expanded ? "rotate-0" : "-rotate-90"
+                      )}
+                    />
+                  </button>
+                )}
+
+                {/* NAV ITEMS */}
+                <div className={cn("space-y-1", !isCollapsed && !expanded && "hidden")}>
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive =
+                      pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+                    return (
+                      <div key={item.href} className="group relative" data-active={isActive || undefined}>
+                        <Link
+                          href={item.href as Route}
+                          onClick={() => setIsMobileOpen(false)}
+                          className={cn(
+                            `
+                            relative flex items-center gap-3 
+                            px-4 py-2.5 rounded-md cursor-pointer 
+                            text-neutral-700 hover:bg-neutral-100 
+                            transition-colors
+                          `,
+                            isCollapsed && "justify-center",
+                            isActive && "bg-neutral-100 text-brand-primary font-medium"
+                          )}
+                        >
+                          {isActive && (
+                            <span className="absolute left-0 top-0 h-full w-[3px] bg-brand-primary rounded-r-md" />
+                          )}
+
+                          <Icon className="size-5 text-neutral-600 group-hover:text-neutral-700 group-data-[active=true]:text-brand-primary" />
+
+                          {!isCollapsed && (
+                            <span className="text-sm font-medium text-neutral-900">{item.label}</span>
+                          )}
+                        </Link>
+
+                        {/* TOOLTIP */}
+                        {isCollapsed && (
+                          <span
+                            className="
+                            pointer-events-none absolute 
+                            left-full ml-2 top-1/2 -translate-y-1/2 
+                            hidden whitespace-nowrap 
+                            rounded-md bg-neutral-900 px-2 py-1 
+                            text-xs text-white 
+                            group-hover:block
+                          "
+                          >
+                            {item.label}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </nav>
 
-        {/* USER + LOGOUT */}
-        <div className="border-t border-border/40 p-4">
-          <div className="rounded-lg bg-accent/30 p-4 shadow-md">
-            <div className="mb-2 flex items-center gap-2">
-              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
-                {userName.charAt(0)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-foreground">{userName}</p>
-                <span
-                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    userCategory?.toLowerCase() === "admin" || userRole === "ADMIN"
-                      ? "bg-blue-500/90 text-white"
-                      : "bg-amber-500/90 text-white"
-                  }`}
-                >
-                  {userCategory || userRole}
-                </span>
-              </div>
+        {/* FOOTER */}
+        <div className="border-t border-neutral-200 bg-white p-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="
+              flex h-10 w-10 items-center justify-center 
+              rounded-full bg-neutral-100 
+              text-sm font-medium text-neutral-700
+            "
+            >
+              {initials}
             </div>
 
-            <LogoutButton />
+            {!isCollapsed && (
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-neutral-900">{userName}</p>
+                {(userCategory || userRole) && (
+                  <p className="text-xs uppercase text-neutral-600">{userCategory ?? userRole}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className={cn("mt-4", isCollapsed && "flex justify-center")}>
+            <LogoutButton iconOnly={isCollapsed} />
           </div>
         </div>
       </aside>

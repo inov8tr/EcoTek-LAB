@@ -42,12 +42,12 @@ export function AdditionalFilesUploader({ binderTestId }: { binderTestId: string
 
   return (
     <div className="space-y-2">
-      <Button variant="outline" onClick={() => setShow(true)}>
+      <Button variant="secondary" onClick={() => setShow(true)}>
         Add more files
       </Button>
       {show && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between pb-3">
               <h3 className="text-lg font-semibold text-[var(--color-text-heading)]">Add files</h3>
               <Button variant="ghost" onClick={() => setShow(false)}>
@@ -55,7 +55,7 @@ export function AdditionalFilesUploader({ binderTestId }: { binderTestId: string
               </Button>
             </div>
             <div
-              className={`mt-2 rounded-2xl border-2 border-dashed p-8 text-center transition ${
+              className={`mt-2 rounded-xl border-2 border-dashed p-8 text-center transition ${
                 dragActive ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/5" : "border-border-subtle"
               }`}
               onDragOver={(e) => {
@@ -75,7 +75,7 @@ export function AdditionalFilesUploader({ binderTestId }: { binderTestId: string
               <p className="text-sm text-[var(--color-text-heading)]">Drag & drop PDFs, images, or videos here</p>
               <p className="text-xs text-[var(--color-text-muted)] mt-1">or</p>
               <div className="mt-3 flex justify-center">
-                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
                   Browse files
                 </Button>
               </div>
@@ -101,7 +101,7 @@ export function AdditionalFilesUploader({ binderTestId }: { binderTestId: string
               )}
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShow(false)} disabled={submitting}>
+              <Button variant="secondary" onClick={() => setShow(false)} disabled={submitting}>
                 Cancel
               </Button>
               <Button onClick={handleUpload} disabled={submitting || files.length === 0}>

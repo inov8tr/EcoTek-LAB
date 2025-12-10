@@ -30,7 +30,7 @@ export default async function SupportPage({ searchParams }: { searchParams?: Pro
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <form action={submitSupportRequest} className="space-y-4 rounded-2xl border border-border bg-white p-6 shadow-sm">
+        <form action={submitSupportRequest} className="space-y-4 rounded-xl border border-border bg-white p-6 shadow-sm">
           <div className="space-y-1">
             <label className="text-sm font-semibold text-[var(--color-text-heading)]">Subject</label>
             <input
@@ -62,7 +62,7 @@ export default async function SupportPage({ searchParams }: { searchParams?: Pro
           </button>
         </form>
 
-        <div className="space-y-3 rounded-2xl border border-border bg-white p-6 shadow-sm">
+        <div className="space-y-3 rounded-xl border border-border bg-white p-6 shadow-sm">
           <div>
             <h2 className="text-xl font-semibold text-[var(--color-text-heading)]">Your recent requests</h2>
             <p className="text-sm text-[var(--color-text-muted)]">Last 5 submissions.</p>

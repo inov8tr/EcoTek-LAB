@@ -54,7 +54,7 @@ export function BinderTestFilesPanel({ testId, files }: { testId: string; files:
             onChange={handleUpload}
           />
           <Button
-            variant="outline"
+            variant="secondary"
             className="px-3 py-1.5 text-xs"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}

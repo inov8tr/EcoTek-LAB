@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { BINDER_BASE_PATH } from "@/lib/binder/storage";
 import { runHybridExtractionForBinderTest } from "@/lib/binder/hybridExtraction";
 import fs from "fs";
+import type { BinderTestExtractedData } from "@/lib/binder/types";
+import { computePgGrade } from "@/lib/services/python-client";
 
 export const runtime = "nodejs";
 
@@ -38,6 +40,8 @@ export async function POST(req: NextRequest) {
     fs.writeFileSync(path.join(aiDir, "ai_extraction.json"), JSON.stringify(extraction.data, null, 2));
   }
 
+  await maybeEnrichWithPython(extraction.data);
+
   await prisma.binderTest.update({
     where: { id: binderTest.id },
     data: {
@@ -57,4 +61,43 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json({ success: true, usedAi: extraction.usedAi });
+}
+
+async function maybeEnrichWithPython(data: BinderTestExtractedData) {
+  if (data.pgHigh && data.pgLow) return;
+  if (!data.dsrData || Object.keys(data.dsrData).length === 0) return;
+
+  const temps = Object.keys(data.dsrData)
+    .map((key) => Number(key))
+    .filter((val) => Number.isFinite(val))
+    .sort((a, b) => a - b);
+  if (!temps.length) return;
+
+  const gValues: number[] = [];
+  for (const temp of temps) {
+    const key = String(temp);
+    const value = data.dsrData?.[key];
+    if (typeof value !== "number" || Number.isNaN(value)) {
+      return;
+    }
+    gValues.push(value);
+  }
+
+  const rtfoValues = gValues.map((val) => val * 0.85);
+
+  try {
+    const response = await computePgGrade({
+      temps,
+      gstar_original: gValues,
+      gstar_rtfo: rtfoValues,
+    });
+    if (response?.pg_high && !data.pgHigh) {
+      data.pgHigh = response.pg_high;
+      if (data.pgLow !== null) {
+        data.performanceGrade = `PG ${data.pgHigh}-${Math.abs(data.pgLow)}`;
+      }
+    }
+  } catch (error) {
+    console.error("Python service enrichment failed", error);
+  }
 }

@@ -63,7 +63,7 @@ export function BinderTestMediaPanel({ testId, media }: { testId: string; media:
             onChange={(e) => uploadMedia(e, "video")}
           />
           <Button
-            variant="outline"
+            variant="secondary"
             className="px-3 py-1.5 text-xs"
             onClick={() => imageInputRef.current?.click()}
             disabled={isUploading}
@@ -72,7 +72,7 @@ export function BinderTestMediaPanel({ testId, media }: { testId: string; media:
             Image
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             className="px-3 py-1.5 text-xs"
             onClick={() => videoInputRef.current?.click()}
             disabled={isUploading}

@@ -32,7 +32,7 @@ export function MaterialInputs() {
         </Button>
       </div>
 
-      <div className="divide-y divide-border-subtle rounded-2xl border border-border-subtle bg-white/70">
+      <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-white/70">
         {rows.map((row) => (
           <div
             key={row}

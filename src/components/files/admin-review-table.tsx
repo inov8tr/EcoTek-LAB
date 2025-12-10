@@ -43,7 +43,7 @@ export function AdminReviewTable({ requests }: AdminReviewTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-white">
+    <div className="overflow-x-auto rounded-xl border border-border bg-white">
       <table className="w-full table-auto text-left text-sm">
         <thead className="text-[var(--color-text-muted)]">
           <tr>

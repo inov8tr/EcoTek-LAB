@@ -46,13 +46,13 @@ export default async function StandardsAdminPage() {
           <input
             name="code"
             placeholder="KR"
-            className="rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+            className="rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
             required
           />
           <input
             name="name"
             placeholder="Korea"
-            className="rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+            className="rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
             required
           />
           <SubmitButton label="Save market" />
@@ -62,7 +62,7 @@ export default async function StandardsAdminPage() {
           <select
             name="marketId"
             required
-            className="rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+            className="rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
           >
             <option value="">Select market</option>
             {markets.map((market) => (
@@ -74,20 +74,20 @@ export default async function StandardsAdminPage() {
           <input
             name="code"
             placeholder="KR_PG82_22"
-            className="rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+            className="rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
             required
           />
           <input
             name="name"
             placeholder="Korean PMA PG82-22"
-            className="rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+            className="rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
             required
           />
           <textarea
             name="description"
             rows={3}
             placeholder="Description"
-            className="rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+            className="rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
           />
           <SubmitButton label="Save standard" />
         </AdminCard>
@@ -96,7 +96,7 @@ export default async function StandardsAdminPage() {
           <select
             name="standardId"
             required
-            className="rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+            className="rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
           >
             <option value="">Select standard</option>
             {standards.map((standard) => (
@@ -108,7 +108,7 @@ export default async function StandardsAdminPage() {
           <select
             name="metric"
             required
-            className="rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+            className="rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
           >
             <option value="">Metric</option>
             {knownMetrics.map((metric) => (
@@ -120,7 +120,7 @@ export default async function StandardsAdminPage() {
           <select
             name="comparison"
             required
-            className="rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+            className="rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
           >
             {comparisonOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -134,26 +134,26 @@ export default async function StandardsAdminPage() {
               type="number"
               step="0.01"
               placeholder="Min"
-              className="w-full rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+              className="w-full rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
             />
             <input
               name="thresholdMax"
               type="number"
               step="0.01"
               placeholder="Max"
-              className="w-full rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+              className="w-full rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
             />
           </div>
           <input
             name="unit"
             placeholder="Unit"
-            className="rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+            className="rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
           />
           <textarea
             name="notes"
             rows={3}
             placeholder="Notes"
-            className="rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+            className="rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
           />
           <SubmitButton label="Add requirement" />
         </AdminCard>
@@ -163,14 +163,14 @@ export default async function StandardsAdminPage() {
         <h2 className="text-lg font-semibold text-[var(--color-text-heading)]">Configured standards</h2>
         <div className="space-y-4">
           {markets.map((market) => (
-            <div key={market.id} className="rounded-2xl border border-border bg-white p-5 shadow-sm">
+            <div key={market.id} className="rounded-xl border border-border bg-white p-5 shadow-sm">
               <h3 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-[0.3em]">
                 {market.code}
               </h3>
               <p className="text-xl font-semibold text-[var(--color-text-heading)]">{market.name}</p>
               <div className="mt-4 space-y-3">
                 {market.standards.map((standard) => (
-                  <div key={standard.id} className="rounded-2xl border border-border/70 p-4">
+                  <div key={standard.id} className="rounded-xl border border-border/70 p-4">
                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                       <div>
                         <p className="text-sm font-semibold text-[var(--color-text-heading)]">
@@ -232,7 +232,7 @@ function AdminCard({
   children: React.ReactNode;
 }) {
   return (
-    <form action={action} className="space-y-3 rounded-2xl border border-border bg-white p-5 shadow-sm">
+    <form action={action} className="space-y-3 rounded-xl border border-border bg-white p-5 shadow-sm">
       <h3 className="text-lg font-semibold text-[var(--color-text-heading)]">{title}</h3>
       {children}
     </form>

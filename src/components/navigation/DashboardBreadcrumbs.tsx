@@ -45,11 +45,11 @@ export function DashboardBreadcrumbs() {
   return (
     <nav
       aria-label="Breadcrumb"
-      className="flex items-center gap-2 text-xs text-gray-500"
+      className="flex items-center gap-2 text-xs text-neutral-500"
     >
       <Link
         href={"/dashboard" as Route}
-        className="inline-flex items-center gap-1 hover:text-gray-700"
+        className="inline-flex items-center gap-1 hover:text-neutral-700"
       >
         <Home size={14} />
         <span className="hidden sm:inline">Home</span>
@@ -60,11 +60,11 @@ export function DashboardBreadcrumbs() {
           <ChevronRight size={14} />
 
           {idx === parts.length - 1 ? (
-            <span className="font-medium text-gray-700">{part.label}</span>
+            <span className="font-medium text-neutral-700">{part.label}</span>
           ) : (
             <Link
               href={part.href as Route}
-              className="hover:text-gray-700"
+              className="hover:text-neutral-700"
             >
               {part.label}
             </Link>

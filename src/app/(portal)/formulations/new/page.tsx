@@ -47,7 +47,7 @@ export default function NewFormulationPage() {
                   name="notes"
                   rows={4}
                   placeholder="Describe target performance, materials, and mixing assumptions..."
-                  className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-3 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+                  className="w-full rounded-xl border border-border-subtle bg-white px-4 py-3 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
                 />
               </label>
             </DashboardCard>
@@ -63,7 +63,7 @@ export default function NewFormulationPage() {
           <DashboardCard className="bg-[var(--color-bg-alt)]/60">
             <div className="flex flex-wrap gap-3">
               <Button disabled>Save Draft</Button>
-              <Button asChild variant="outline">
+              <Button asChild variant="secondary">
                 <Link href="/formulations">Cancel</Link>
               </Button>
             </div>
@@ -95,7 +95,7 @@ function FormField({ label, name, placeholder, type = "text", step }: FormFieldP
         step={step}
         name={name}
         placeholder={placeholder}
-        className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+        className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
       />
     </label>
   );

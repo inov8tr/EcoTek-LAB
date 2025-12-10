@@ -61,7 +61,7 @@ export function DeleteRequestModal({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" aria-modal="true" role="dialog">
           <div
             ref={dialogRef}
-            className="w-full max-w-md space-y-4 rounded-2xl border border-border bg-white p-6 shadow-2xl"
+            className="w-full max-w-md space-y-4 rounded-xl border border-border bg-white p-6 shadow-2xl"
           >
             <h3 className="text-lg font-semibold text-[var(--color-text-heading)]">Submit deletion request</h3>
             <p className="text-sm text-[var(--color-text-main)]">
@@ -71,7 +71,7 @@ export function DeleteRequestModal({
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               rows={4}
-              className="w-full rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+              className="w-full rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
               placeholder="Provide context for deletion..."
             />
             {error && <p className="text-sm font-semibold text-[var(--color-status-fail-text)]">{error}</p>}

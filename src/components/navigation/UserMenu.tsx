@@ -68,7 +68,7 @@ export function UserMenu({ user, unreadCount = 0 }: { user: CurrentUser; unreadC
         aria-label="Open account menu"
         aria-expanded={open}
         aria-haspopup="menu"
-        className="relative flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]"
+        className="relative flex h-14 w-14 items-center justify-center rounded-full border border-border bg-white shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]"
       >
         <AvatarCircle src={user.avatarUrl ?? undefined} alt={user.displayName ?? user.name ?? "User"} fallback={initial} />
         {unreadCount > 0 && (
@@ -275,13 +275,13 @@ function AvatarCircle({
 }) {
   if (src) {
     return (
-      <div className="h-8 w-8 overflow-hidden rounded-full border border-border">
-        <Image src={src} alt={alt} width={32} height={32} className="h-full w-full object-cover" />
+      <div className="h-11 w-11 overflow-hidden rounded-full border border-border">
+        <Image src={src} alt={alt} width={44} height={44} className="h-full w-full object-cover" />
       </div>
     );
   }
   return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-[var(--color-bg-alt)] text-sm font-semibold">
+    <div className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-[var(--color-bg-alt)] text-base font-semibold">
       {fallback.toUpperCase()}
     </div>
   );

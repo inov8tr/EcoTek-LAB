@@ -62,7 +62,7 @@ export default async function FormulationDetailPage({
                 Archived {detail.archivedAt ? formatDate(new Date(detail.archivedAt)) : ""}
               </span>
             )}
-            <Button variant="outline" className="gap-2 bg-white">
+            <Button variant="secondary" className="gap-2 bg-white">
               <Download className="h-4 w-4" />
               Export Data
             </Button>
@@ -84,7 +84,7 @@ export default async function FormulationDetailPage({
         </div>
       </div>
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-border bg-white p-6 shadow-sm">
         <div className="grid gap-6 md:grid-cols-4">
           <div>
             <p className="text-sm text-[var(--color-text-muted)]">Formula</p>

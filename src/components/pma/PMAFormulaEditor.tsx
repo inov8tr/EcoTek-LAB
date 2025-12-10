@@ -116,7 +116,7 @@ export function PMAFormulaEditor({
               onChange={(e) => handleChange("name", e.target.value)}
               placeholder="e.g. KR25-PG82-22"
               required
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm"
             />
           </label>
           <SelectField
@@ -189,7 +189,7 @@ export function PMAFormulaEditor({
               value={form.bitumenGradeOverride ?? ""}
               onChange={(e) => handleChange("bitumenGradeOverride", e.target.value)}
               placeholder="PG 82-28 (override)"
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm"
             />
           </label>
           <label className="space-y-1 text-xs font-semibold text-[var(--color-text-heading)] md:col-span-2">
@@ -198,7 +198,7 @@ export function PMAFormulaEditor({
               value={form.notes ?? ""}
               onChange={(e) => handleChange("notes", e.target.value)}
               rows={3}
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-3 text-sm"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-3 text-sm"
             />
           </label>
         </div>
@@ -237,7 +237,7 @@ function SelectField({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm"
+        className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm"
       >
         {allowEmpty && (
           <option value="">
@@ -275,7 +275,7 @@ function NumberField({
         step={step}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full rounded-2xl border px-4 py-2 text-sm ${
+        className={`w-full rounded-xl border px-4 py-2 text-sm ${
           warning
             ? "border-red-500 bg-red-50 text-red-700"
             : "border-border-subtle bg-white text-[var(--color-text-heading)]"

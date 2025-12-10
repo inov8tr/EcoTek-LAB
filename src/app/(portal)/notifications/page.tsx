@@ -104,7 +104,7 @@ export default async function NotificationsPage() {
 
       <SystemCard />
 
-      <section className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+      <section className="rounded-xl border border-border bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm font-semibold text-[var(--color-text-heading)]">Live feed</div>
@@ -137,7 +137,7 @@ function NotificationCard({
   showActions?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-white">
+    <div className="rounded-xl border border-border bg-white">
       <div className="border-b border-border bg-[var(--color-bg-alt)] px-4 py-3">
         <div className="text-sm font-semibold text-[var(--color-text-heading)]">{title}</div>
         <div className="text-xs text-[var(--color-text-muted)]">{description}</div>
@@ -221,7 +221,7 @@ function SystemCard() {
     },
   ];
   return (
-    <div className="rounded-2xl border border-border bg-white">
+    <div className="rounded-xl border border-border bg-white">
       <div className="border-b border-border bg-[var(--color-bg-alt)] px-4 py-3">
         <div className="text-sm font-semibold text-[var(--color-text-heading)]">System updates</div>
         <div className="text-xs text-[var(--color-text-muted)]">Announcements and product tips.</div>

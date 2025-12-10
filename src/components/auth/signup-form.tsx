@@ -35,7 +35,7 @@ export function SignupForm() {
           name="name"
           required
           placeholder="Jane Doe"
-          className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
+          className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
         />
       </div>
       <div className="space-y-2">
@@ -48,7 +48,7 @@ export function SignupForm() {
           type="email"
           required
           placeholder="you@ecotek.com"
-          className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
+          className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
         />
       </div>
       <div className="space-y-2">
@@ -64,7 +64,7 @@ export function SignupForm() {
           type="password"
           required
           placeholder="Create a secure passphrase"
-          className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
+          className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
         />
       </div>
       {state.error && (

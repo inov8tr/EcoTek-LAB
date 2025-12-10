@@ -37,7 +37,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
           type="email"
           required
           placeholder="rd-lead@ecotek.com"
-          className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
+          className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
         />
       </div>
       <div className="space-y-2">
@@ -50,7 +50,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
           type="password"
           required
           placeholder="lab-demo-2025"
-          className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
+          className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
         />
       </div>
       <div className="space-y-2">
@@ -64,7 +64,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
           inputMode="numeric"
           pattern="[0-9]*"
           placeholder="123456"
-          className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
+          className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
         />
       </div>
       <div className="space-y-2">
@@ -76,7 +76,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
           name="recoveryCode"
           type="text"
           placeholder="ABCD-EFGH"
-          className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
+          className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
         />
       </div>
       {state?.error && (

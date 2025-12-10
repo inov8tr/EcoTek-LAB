@@ -91,7 +91,7 @@ export default async function BatchesPage({
             defaultValue={q}
             className="w-48 text-sm outline-none"
           />
-          <Button type="submit" variant="outline" size="sm">
+          <Button type="submit" variant="secondary" size="sm">
             Apply
           </Button>
           {q && (

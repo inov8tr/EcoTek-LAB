@@ -43,7 +43,7 @@ export function ComparisonPanel({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-border bg-white/80 p-4 shadow-sm">
+      <div className="rounded-xl border border-border bg-white/80 p-4 shadow-sm">
         <label className="text-sm font-semibold text-[var(--color-text-heading)]">
           Compare formulations
         </label>
@@ -59,7 +59,7 @@ export function ComparisonPanel({
             const fallback = formulations[0] ? [formulations[0]] : [];
             setSelected(values.length ? values : fallback);
           }}
-          className="mt-3 w-full rounded-2xl border border-border bg-white p-3 text-sm shadow-sm"
+          className="mt-3 w-full rounded-xl border border-border bg-white p-3 text-sm shadow-sm"
         >
           {formulations.map((name) => (
             <option key={name} value={name}>

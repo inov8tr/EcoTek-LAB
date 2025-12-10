@@ -2,7 +2,7 @@ import { Slot } from "@radix-ui/react-slot";
 import { cn } from "@/lib/utils";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "outline" | "ghost";
+  variant?: "primary" | "secondary" | "destructive" | "ghost";
   size?: "sm" | "md" | "lg";
   asChild?: boolean;
 }
@@ -15,13 +15,11 @@ export function Button({
   asChild,
   ...props
 }: ButtonProps) {
-  const styles = {
-    primary:
-      "bg-[var(--color-accent-primary)] text-white hover:bg-[var(--color-accent-primary)]/90",
-    outline:
-      "border border-border text-[var(--color-text-heading)] hover:bg-[var(--color-bg-alt)]",
-    ghost:
-      "text-[var(--color-text-heading)] hover:bg-[var(--color-bg-alt)]/80",
+  const variants = {
+    primary: "bg-brand-primary text-white hover:bg-brand-primary/90 focus-visible:ring-brand-primary/40",
+    secondary: "bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-100",
+    destructive: "bg-red-600 text-white hover:bg-red-700",
+    ghost: "text-neutral-700 hover:bg-neutral-100",
   };
   const sizes = {
     sm: "px-3 py-1.5 text-xs",
@@ -34,8 +32,8 @@ export function Button({
   return (
     <Component
       className={cn(
-        "inline-flex items-center gap-2 rounded-full font-semibold transition-colors",
-        styles[variant],
+        "inline-flex items-center gap-2 rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2",
+        variants[variant],
         sizes[size],
         className
       )}

@@ -78,7 +78,7 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
           <select
             id="pmaFormulaId"
             name="pmaFormulaId"
-            className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm"
+            className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm"
             defaultValue=""
           >
             <option value="">No PMA link</option>
@@ -115,7 +115,7 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
 
       <div className="space-y-2">
         <Label>Upload Files</Label>
-        <Button type="button" variant="outline" onClick={() => setShowUploader(true)}>
+        <Button type="button" variant="secondary" onClick={() => setShowUploader(true)}>
           Open uploader
         </Button>
         <p className="text-xs text-muted-foreground">
@@ -124,7 +124,7 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
       </div>
       {showUploader && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between pb-3">
               <h3 className="text-lg font-semibold text-[var(--color-text-heading)]">Upload files</h3>
               <Button variant="ghost" onClick={() => setShowUploader(false)}>
@@ -132,7 +132,7 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
               </Button>
             </div>
             <div
-              className={`mt-2 rounded-2xl border-2 border-dashed p-8 text-center transition ${
+              className={`mt-2 rounded-xl border-2 border-dashed p-8 text-center transition ${
                 dragActive ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/5" : "border-border-subtle"
               }`}
               onDragOver={(e) => {
@@ -152,7 +152,7 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
               <p className="text-sm text-[var(--color-text-heading)]">Drag & drop PDFs, images, or videos here</p>
               <p className="text-xs text-[var(--color-text-muted)] mt-1">or</p>
               <div className="mt-3 flex justify-center">
-                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
                   Browse files
                 </Button>
               </div>
@@ -178,7 +178,7 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
               )}
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => { setAllFiles([]); }}>
+              <Button variant="secondary" onClick={() => { setAllFiles([]); }}>
                 Clear
               </Button>
               <Button onClick={() => setShowUploader(false)}>Done</Button>
@@ -188,7 +188,7 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
       )}
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
+        <Button type="button" variant="secondary" onClick={() => router.back()} disabled={isSubmitting}>
           Cancel
         </Button>
         <Button type="submit" disabled={isSubmitting}>

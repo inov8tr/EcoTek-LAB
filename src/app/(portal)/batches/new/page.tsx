@@ -20,7 +20,7 @@ export default async function NewBatchPage() {
         </p>
       </div>
 
-      <form action={createBatch} className="space-y-6 rounded-2xl border border-border bg-white p-6 shadow-sm">
+      <form action={createBatch} className="space-y-6 rounded-xl border border-border bg-white p-6 shadow-sm">
         <section className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-[var(--color-text-heading)]">
@@ -29,7 +29,7 @@ export default async function NewBatchPage() {
             <select
               name="formulationId"
               required
-              className="rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+              className="rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
             >
               <option value="">Select formulation</option>
               {formulations.map((formula) => (
@@ -47,7 +47,7 @@ export default async function NewBatchPage() {
               name="batchCode"
               required
               placeholder="B-301"
-              className="w-full rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+              className="w-full rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
             />
           </div>
           <div className="space-y-2">
@@ -58,7 +58,7 @@ export default async function NewBatchPage() {
               type="date"
               name="dateMixed"
               required
-              className="w-full rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+              className="w-full rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
             />
           </div>
           <div className="space-y-2">
@@ -66,7 +66,7 @@ export default async function NewBatchPage() {
             <input
               name="operator"
               placeholder="Kim, J."
-              className="w-full rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+              className="w-full rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
             />
           </div>
         </section>
@@ -78,7 +78,7 @@ export default async function NewBatchPage() {
               type="number"
               name="rpm"
               placeholder="420"
-              className="w-full rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+              className="w-full rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
             />
           </div>
           <div className="space-y-2">
@@ -88,7 +88,7 @@ export default async function NewBatchPage() {
               step="0.1"
               name="startTemp"
               placeholder="140"
-              className="w-full rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+              className="w-full rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
             />
           </div>
           <div className="space-y-2">
@@ -98,7 +98,7 @@ export default async function NewBatchPage() {
               step="0.1"
               name="finalTemp"
               placeholder="176"
-              className="w-full rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+              className="w-full rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
             />
           </div>
           <div className="space-y-2">
@@ -107,7 +107,7 @@ export default async function NewBatchPage() {
               type="number"
               name="duration"
               placeholder="75"
-              className="w-full rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+              className="w-full rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
             />
           </div>
         </section>
@@ -118,7 +118,7 @@ export default async function NewBatchPage() {
             name="notes"
             rows={4}
             placeholder="Describe any deviations, holds, or additives used during mixing."
-            className="w-full rounded-2xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
+            className="w-full rounded-xl border border-border bg-[var(--color-bg-alt)] px-4 py-3 text-sm"
           />
         </div>
 

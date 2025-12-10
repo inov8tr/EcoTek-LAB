@@ -41,7 +41,7 @@ export default async function AdminHomePage() {
           <Link
             key={tile.href}
             href={tile.href as Route}
-            className="rounded-2xl border border-border bg-white p-5 shadow-sm transition hover:shadow-md"
+            className="rounded-xl border border-border bg-white p-5 shadow-sm transition hover:shadow-md"
           >
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--color-text-muted)]">EcoTek admin</p>
             <h2 className="mt-3 text-xl font-semibold text-[var(--color-text-heading)]">{tile.title}</h2>

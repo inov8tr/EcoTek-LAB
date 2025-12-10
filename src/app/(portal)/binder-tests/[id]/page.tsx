@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
 import type { BinderTestExtractedData } from "@/lib/binder/types";
+import { computePgGrade } from "@/lib/services/python-client";
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -24,10 +25,19 @@ export default async function BinderTestDetailPage({ params }: { params: Promise
   }
 
   const extracted: Partial<BinderTestExtractedData> = (test.aiExtractedData as any)?.data ?? {};
+  const dsrData = (test.dsrData as Record<string, number> | null) ?? null;
+
+  const computedPgHigh = await computePgFromPython({
+    currentPgHigh: extracted.pgHigh ?? test.pgHigh,
+    dsrData,
+  });
 
   const performance: FieldRow[] = [
-    { label: "Performance Grade", value: extracted.performanceGrade ?? buildPg(test.pgHigh, test.pgLow) },
-    { label: "PG High (°C)", value: extracted.pgHigh ?? test.pgHigh },
+    {
+      label: "Performance Grade",
+      value: extracted.performanceGrade ?? buildPg(extracted.pgHigh ?? test.pgHigh ?? computedPgHigh, test.pgLow),
+    },
+    { label: "PG High (°C)", value: extracted.pgHigh ?? test.pgHigh ?? computedPgHigh },
     { label: "PG Low (°C)", value: extracted.pgLow ?? test.pgLow },
   ];
 
@@ -80,7 +90,7 @@ export default async function BinderTestDetailPage({ params }: { params: Promise
           <p className="text-sm text-muted-foreground">Created {formatDateTime(test.createdAt)}</p>
         </div>
         <div className="flex flex-col items-end gap-2 text-sm">
-          <Badge variant="outline">{test.status}</Badge>
+          <Badge variant="secondary">{test.status}</Badge>
           <div className="text-xs text-muted-foreground">
             CRM: {test.crmPct ?? "-"}% · Reagent: {test.reagentPct ?? "-"}% · Aerosil: {test.aerosilPct ?? "-"}%
           </div>
@@ -123,4 +133,44 @@ function Section({ title, fields }: { title: string; fields: FieldRow[] }) {
 function buildPg(pgHigh?: number | null, pgLow?: number | null) {
   if (pgHigh === null || pgHigh === undefined || pgLow === null || pgLow === undefined) return null;
   return `PG ${pgHigh}-${Math.abs(pgLow)}`;
+}
+
+async function computePgFromPython({
+  currentPgHigh,
+  dsrData,
+}: {
+  currentPgHigh?: number | null;
+  dsrData: Record<string, number> | null;
+}) {
+  if (currentPgHigh || !dsrData || !Object.keys(dsrData).length) {
+    return currentPgHigh ?? null;
+  }
+
+  const temps = Object.keys(dsrData)
+    .map((key) => Number(key))
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => a - b);
+
+  if (!temps.length) return null;
+
+  const gstar = [];
+  for (const temp of temps) {
+    const val = dsrData[String(temp)];
+    if (typeof val !== "number" || Number.isNaN(val)) {
+      return null;
+    }
+    gstar.push(val);
+  }
+
+  try {
+    const { pg_high: pgHigh } = await computePgGrade({
+      temps,
+      gstar_original: gstar,
+      gstar_rtfo: gstar.map((value) => value * 0.85),
+    });
+    return pgHigh ?? null;
+  } catch (error) {
+    console.error("Unable to compute PG via python service", error);
+    return null;
+  }
 }

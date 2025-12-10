@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
+import { Buffer } from "node:buffer";
 import { authenticator } from "otplib";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-helpers";
@@ -28,14 +29,23 @@ async function requireActiveUser() {
 
 export async function updateProfile(formData: FormData) {
   const user = await requireActiveUser();
+  const avatarFile = formData.get("avatarFile");
+  let avatarUrl = (formData.get("currentAvatarUrl") ?? "").toString().trim() || null;
+
+  if (avatarFile instanceof File && avatarFile.size > 0) {
+    const bytes = await avatarFile.arrayBuffer();
+    const base64 = Buffer.from(bytes).toString("base64");
+    const mime = avatarFile.type || "image/png";
+    avatarUrl = `data:${mime};base64,${base64}`;
+  }
+
   await prisma.user.update({
     where: { id: user.id },
     data: {
       displayName: (formData.get("displayName") ?? "").toString().trim() || null,
-      avatarUrl: (formData.get("avatarUrl") ?? "").toString().trim() || null,
+      avatarUrl,
       bannerUrl: (formData.get("bannerUrl") ?? "").toString().trim() || null,
       handle: (formData.get("handle") ?? "").toString().trim() || null,
-      pronouns: (formData.get("pronouns") ?? "").toString().trim() || null,
       bio: (formData.get("bio") ?? "").toString().trim() || null,
       locale: (formData.get("locale") ?? "").toString().trim() || "en-US",
       timeZone: (formData.get("timeZone") ?? "").toString().trim() || "UTC",

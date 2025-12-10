@@ -23,7 +23,7 @@ export default async function AccountPage() {
         <p className="text-[var(--color-text-muted)]">Manage your profile and approval status.</p>
       </div>
 
-      <section className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+      <section className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
         {currentUser.bannerUrl && (
           <div className="h-24 w-full bg-cover bg-center" style={{ backgroundImage: `url(${currentUser.bannerUrl})` }} />
         )}
@@ -75,7 +75,7 @@ export default async function AccountPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-dashed border-border bg-[var(--color-bg-alt)]/70 p-6 text-sm text-[var(--color-text-main)]">
+      <section className="rounded-xl border border-dashed border-border bg-[var(--color-bg-alt)]/70 p-6 text-sm text-[var(--color-text-main)]">
         <p>
           Need elevated permissions? Open an internal ticket or reach out in{" "}
           <Link href={"/admin/users" as Route} className="font-semibold text-[var(--color-text-link)]">

@@ -39,7 +39,7 @@ export default function ResetPasswordTokenPage({ params }: { params: { token: st
               name="newPassword"
               type="password"
               required
-              className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
+              className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-[var(--color-accent-primary)] focus:outline-none"
               placeholder="Choose a strong password"
             />
           </div>

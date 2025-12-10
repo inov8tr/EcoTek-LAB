@@ -58,7 +58,7 @@ export function BitumenOriginEditor({
               value={refineryName}
               onChange={(e) => setRefineryName(e.target.value)}
               placeholder="GS Caltex Ulsan, SK Energy, etc."
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
             />
           </label>
 
@@ -69,7 +69,7 @@ export function BitumenOriginEditor({
               value={binderGrade}
               onChange={(e) => setBinderGrade(e.target.value)}
               placeholder="PG 64-22, VG 40, etc."
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
             />
           </label>
 
@@ -79,7 +79,7 @@ export function BitumenOriginEditor({
               value={originCountry}
               onChange={(e) => setOriginCountry(e.target.value)}
               placeholder="South Korea, USA, etc."
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
             />
           </label>
 
@@ -90,7 +90,7 @@ export function BitumenOriginEditor({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Include any observations about crude source, processing details, or special handling."
               rows={4}
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-3 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-3 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
             />
           </label>
         </div>

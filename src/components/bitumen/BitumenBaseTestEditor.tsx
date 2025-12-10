@@ -94,7 +94,7 @@ export function BitumenBaseTestEditor({
               required
               value={form.bitumenOriginId}
               onChange={(e) => handleChange("bitumenOriginId", e.target.value)}
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm"
             >
               {originOptions.map((option) => (
                 <option key={option.id} value={option.id}>
@@ -111,7 +111,7 @@ export function BitumenBaseTestEditor({
               value={form.batchCode}
               onChange={(e) => handleChange("batchCode", e.target.value)}
               placeholder="e.g. BO-2025-01"
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm"
             />
           </label>
 
@@ -121,7 +121,7 @@ export function BitumenBaseTestEditor({
               type="datetime-local"
               value={form.testedAt ?? ""}
               onChange={(e) => handleChange("testedAt", e.target.value)}
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm"
             />
           </label>
         </div>
@@ -173,7 +173,7 @@ export function BitumenBaseTestEditor({
               type="number"
               value={form.basePgHigh ?? ""}
               onChange={(e) => handleChange("basePgHigh", e.target.value)}
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm"
             />
           </label>
           <label className="space-y-1 text-xs font-semibold text-[var(--color-text-heading)]">
@@ -182,7 +182,7 @@ export function BitumenBaseTestEditor({
               type="number"
               value={form.basePgLow ?? ""}
               onChange={(e) => handleChange("basePgLow", e.target.value)}
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm"
             />
           </label>
         </div>
@@ -199,7 +199,7 @@ export function BitumenBaseTestEditor({
           value={form.notes ?? ""}
           onChange={(e) => handleChange("notes", e.target.value)}
           rows={4}
-          className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-3 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+          className="w-full rounded-xl border border-border-subtle bg-white px-4 py-3 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
         />
       </DashboardCard>
 
@@ -228,7 +228,7 @@ function MetricField({
         type="number"
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm"
+        className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm"
       />
     </label>
   );

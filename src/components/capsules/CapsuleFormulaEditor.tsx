@@ -106,7 +106,7 @@ export function CapsuleFormulaEditor({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. EcoCap F-12A"
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
               required
             />
           </label>
@@ -117,7 +117,7 @@ export function CapsuleFormulaEditor({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Short description or target application"
-              className="w-full rounded-2xl border border-border-subtle bg-white px-4 py-2 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+              className="w-full rounded-xl border border-border-subtle bg-white px-4 py-2 text-sm text-[var(--color-text-heading)] focus:border-[var(--color-accent-primary)] focus:outline-none"
             />
           </label>
         </div>
@@ -147,7 +147,7 @@ export function CapsuleFormulaEditor({
           {materials.map((row, index) => (
             <div
               key={row.id}
-              className="grid gap-3 rounded-2xl border border-border-subtle bg-white/70 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_140px_auto]"
+              className="grid gap-3 rounded-xl border border-border-subtle bg-white/70 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_140px_auto]"
             >
               <div className="space-y-1 text-xs font-semibold text-[var(--color-text-heading)]">
                 <span className="text-[var(--color-text-muted)]">Material {index + 1}</span>
@@ -193,7 +193,7 @@ export function CapsuleFormulaEditor({
         <div className="mt-4 flex flex-wrap gap-3">
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={handleAddRow}
             disabled={disableAdd}
             className="rounded-full px-4 py-2 text-xs"

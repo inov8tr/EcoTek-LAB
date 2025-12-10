@@ -10,7 +10,7 @@ export default function ForgotPasswordPage() {
   const [state, formAction] = useActionState(requestPasswordReset as any, initialState);
 
   return (
-    <div className="mx-auto max-w-md space-y-4 rounded-2xl border border-border bg-white p-6 shadow-sm">
+    <div className="mx-auto max-w-md space-y-4 rounded-xl border border-border bg-white p-6 shadow-sm">
       <h1 className="text-xl font-semibold text-[var(--color-text-heading)]">Reset your password</h1>
       <p className="text-sm text-[var(--color-text-muted)]">
         Enter your email to generate a reset link. Copy the link to reset your password.

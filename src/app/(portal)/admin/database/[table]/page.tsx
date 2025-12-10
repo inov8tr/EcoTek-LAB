@@ -74,7 +74,7 @@ export default async function TablePage({ params, searchParams }: PageProps) {
           <h1 className="text-3xl font-bold text-[var(--color-text-heading)]">{tableParam}</h1>
           <p className="text-[var(--color-text-muted)]">Read-only view · public schema</p>
         </div>
-        <Button asChild variant="outline">
+        <Button asChild variant="secondary">
           <Link href={"/admin/database" as Route}>Back to tables</Link>
         </Button>
         <Button asChild variant="ghost">
