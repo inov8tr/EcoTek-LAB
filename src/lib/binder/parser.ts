@@ -1,11 +1,20 @@
 import fs from "fs";
+import type { DocumentInitParameters } from "pdfjs-dist/types/src/display/api";
 import { BinderTestExtractedData, EMPTY_EXTRACTED } from "./types";
 
 export async function extractTextFromPdf(localPath: string): Promise<string> {
-  const data = new Uint8Array(fs.readFileSync(localPath));
-  // Use pdfjs-dist legacy build for Node
+  const data = await fs.promises.readFile(localPath);
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const doc = await pdfjs.getDocument({ data, useWorkerFetch: false }).promise;
+  pdfjs.GlobalWorkerOptions.workerPort = null;
+  const docConfig: DocumentInitParameters = {
+    data: new Uint8Array(data),
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    disableStream: true,
+    disableAutoFetch: true,
+  };
+  const doc = await pdfjs.getDocument(docConfig).promise;
+
   let out = "";
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
