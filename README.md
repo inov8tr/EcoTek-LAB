@@ -35,6 +35,37 @@ NEXTAUTH_SECRET=generate-a-random-string
 # ECOTEK_ADMIN_PASSWORD=ChangeMeNow!2024
 ```
 
+## Environment Variables (Codespaces)
+
+Codespaces never receives secrets from the repo. Each developer must inject the full variable set as **Codespaces secrets** and mirror them in a local `.env` when running outside GitHub.
+
+1. In GitHub, open **Repository → Settings → Codespaces → Secrets → New secret**.
+2. Create the following secrets (names must match exactly):
+
+```
+DATABASE_URL
+NEXTAUTH_SECRET
+NEXTAUTH_URL
+APP_BASE_URL
+ABLY_KEY
+NEXT_PUBLIC_ABLY_KEY
+OPENAI_API_KEY
+SMTP_HOST
+SMTP_PORT
+SMTP_USER
+SMTP_PASS
+SMTP_FROM
+SUPPORT_EMAIL
+ECOTEK_ADMIN_EMAIL
+ECOTEK_ADMIN_PASSWORD
+VIEWER_CAN_DOWNLOAD_FILES
+```
+
+3. Rebuild or restart the Codespace so the secrets hydrate the shell session.
+4. For local development, copy `.env` to `.env.local` (which is already ignored) and replace the placeholders with your actual values.
+
+`dotenv.enableAutoload` in `.devcontainer/devcontainer.json` automatically loads `.env` so Next.js, Prisma, NextAuth, SMTP, Ably, and AI features read the same configuration everywhere.
+
 ### Default credentials & workflow
 
 `npm run db:seed` now creates an active administrator:

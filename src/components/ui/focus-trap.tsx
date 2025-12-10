@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export function useFocusTrap(active: boolean, refs: Array<React.RefObject<HTMLElement>>) {
+export function useFocusTrap(active: boolean, refs: Array<React.RefObject<HTMLElement | null>>) {
   const lastActive = useRef<Element | null>(null);
 
   useEffect(() => {

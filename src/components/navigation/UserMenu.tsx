@@ -199,12 +199,11 @@ function MenuItem({
   label: string;
   icon: React.ReactNode;
   onSelect: () => void;
-  firstRef?: React.RefObject<HTMLAnchorElement>;
+  firstRef?: React.RefObject<HTMLAnchorElement | null>;
   registerRef?: (el: HTMLAnchorElement | null) => void;
 }) {
   return (
     <Link
-      ref={firstRef}
       href={href}
       className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--color-text-heading)] hover:bg-[var(--color-bg-alt)]"
       role="menuitem"

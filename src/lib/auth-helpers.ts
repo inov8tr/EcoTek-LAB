@@ -26,6 +26,7 @@ export type CurrentUser = {
   loginAlerts?: boolean;
   twoFactorEnabled?: boolean;
   sessionId?: string | null;
+  notificationEmailOptIn?: boolean | null;
   notificationPushOptIn?: boolean | null;
   notificationInAppOptIn?: boolean | null;
   unreadNotifications?: number;

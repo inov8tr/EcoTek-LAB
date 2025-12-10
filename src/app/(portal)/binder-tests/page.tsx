@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { BinderTestStatus, UserRole } from "@prisma/client";
+import { BinderTestStatus, UserRole, Prisma } from "@prisma/client";
 import { PlusCircle, FlaskConical, Filter, Download } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
@@ -31,7 +31,7 @@ export default async function BinderTestsPage({ searchParams }: BinderTestsPageP
         ? {
             name: {
               contains: q,
-              mode: "insensitive",
+              mode: Prisma.QueryMode.insensitive,
             },
           }
         : {},

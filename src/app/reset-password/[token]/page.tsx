@@ -5,7 +5,11 @@ import Link from "next/link";
 import type { Route } from "next";
 import { resetPassword } from "@/app/actions/security";
 
-const initialState = { error: "", success: "" };
+type ResetPasswordState =
+  | { error: string; success?: undefined }
+  | { success: string; error?: undefined };
+
+const initialState: ResetPasswordState = { error: "" };
 
 export default function ResetPasswordTokenPage({ params }: { params: { token: string } }) {
   const [state, formAction] = useActionState(resetPassword, initialState);

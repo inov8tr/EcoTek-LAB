@@ -3,7 +3,8 @@ import { authenticator } from "otplib";
 import { getDatabaseStatus } from "@/lib/db";
 import { requireStatus, getCurrentUser } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { describeUserAgent, describeLocation, formatDateTime, lookupGeo } from "@/lib/utils";
+import { describeUserAgent, describeLocation, formatDateTime } from "@/lib/utils";
+import { lookupGeo } from "@/lib/geo";
 import {
   updateProfile,
   changePassword,

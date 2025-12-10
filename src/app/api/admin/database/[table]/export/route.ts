@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _req: Request,
-  { params }: { params: { table: string } }
+  context: { params: Promise<{ table: string }> }
 ) {
-  const tableParam = decodeURIComponent(params.table);
+  const { table } = await context.params;
+  const tableParam = decodeURIComponent(table);
   const tables =
     await prisma.$queryRaw<{ table_name: string }[]>`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`;
   const tableNames = new Set(tables.map((t) => t.table_name));

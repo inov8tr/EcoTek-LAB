@@ -1,0 +1,16 @@
+{
+  "name": "EcoTek Portal Dev",
+  "postCreateCommand": "pnpm install",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "dotenv.enableAutoload": true
+      },
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "mikestead.dotenv"
+      ]
+    }
+  }
+}
