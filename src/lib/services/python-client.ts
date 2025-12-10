@@ -12,13 +12,17 @@ type PgResponsePayload = {
 
 export async function getPythonServiceHealth(): Promise<boolean> {
   const url = buildPythonServiceUrl("/health");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 2500);
   try {
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { cache: "no-store", signal: controller.signal });
     if (!res.ok) return false;
     const data = (await res.json()) as { status?: string };
     return data?.status === "ok";
   } catch {
     return false;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

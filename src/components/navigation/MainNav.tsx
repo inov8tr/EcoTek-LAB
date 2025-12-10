@@ -120,7 +120,7 @@ function NotificationMenu({ notifications, unreadCount }: NotificationMenuProps)
       >
         <Bell className={`size-5 ${hasUnread ? "text-brand-primary" : "text-neutral-600"}`} />
         {hasUnread && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-brand-primary px-[6px] text-[10px] font-semibold text-white">
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-primary px-1.5 text-[10px] font-semibold text-white">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}

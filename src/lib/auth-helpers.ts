@@ -34,8 +34,40 @@ export type CurrentUser = {
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const session = await auth();
-  if (!session?.user) return null;
-  return session.user as CurrentUser;
+  const sessionUser = session?.user;
+  if (!sessionUser?.id) return null;
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: sessionUser.id },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      status: true,
+      displayName: true,
+      avatarUrl: true,
+      bannerUrl: true,
+      handle: true,
+      pronouns: true,
+      bio: true,
+      locale: true,
+      timeZone: true,
+      theme: true,
+      loginAlerts: true,
+      twoFactorEnabled: true,
+      notificationEmailOptIn: true,
+      notificationPushOptIn: true,
+      notificationInAppOptIn: true,
+    },
+  });
+
+  if (!dbUser) return null;
+
+  return {
+    ...dbUser,
+    sessionId: (session as any).sessionId ?? null,
+  };
 }
 
 export async function requireStatus(status: UserStatus) {

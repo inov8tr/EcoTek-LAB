@@ -93,48 +93,17 @@ export const {
           name: user.name,
           role: user.role,
           status: user.status,
-          displayName: user.displayName,
-          avatarUrl: user.avatarUrl,
-          bannerUrl: user.bannerUrl,
-          handle: user.handle,
-          pronouns: user.pronouns,
-          bio: user.bio,
-          locale: user.locale,
-          timeZone: user.timeZone,
-          theme: user.theme,
-          loginAlerts: user.loginAlerts,
-          twoFactorEnabled: user.twoFactorEnabled,
-          emailVerified: user.emailVerified,
-          notificationEmailOptIn: user.notificationEmailOptIn,
-          notificationPushOptIn: user.notificationPushOptIn,
-          notificationInAppOptIn: user.notificationInAppOptIn,
         };
       },
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.role = (user as { role?: UserRole }).role;
         token.status = (user as { status?: UserStatus }).status;
-        token.displayName = (user as any).displayName ?? null;
-        token.avatarUrl = (user as any).avatarUrl ?? null;
-        token.bannerUrl = (user as any).bannerUrl ?? null;
-        token.handle = (user as any).handle ?? null;
-        token.pronouns = (user as any).pronouns ?? null;
-        token.bio = (user as any).bio ?? null;
-        token.locale = (user as any).locale ?? null;
-        token.timeZone = (user as any).timeZone ?? null;
-        token.theme = (user as any).theme ?? "system";
-        token.loginAlerts = (user as any).loginAlerts ?? false;
-        token.twoFactorEnabled = (user as any).twoFactorEnabled ?? false;
-        token.emailVerified = (user as any).emailVerified ?? null;
-        token.notificationEmailOptIn = (user as any).notificationEmailOptIn ?? true;
-        token.notificationPushOptIn = (user as any).notificationPushOptIn ?? false;
-        token.notificationInAppOptIn = (user as any).notificationInAppOptIn ?? true;
         token.sessionId = token.sessionId ?? randomUUID();
-        // Persist session for active user
-        prisma.session
+        await prisma.session
           .upsert({
             where: { jti: token.sessionId as string },
             create: { jti: token.sessionId as string, userId: (user as any).id },
@@ -144,27 +113,17 @@ export const {
       }
       return token;
     },
-    session({ session, token }) {
+    async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.sub ?? "";
-        session.user.role = (token.role as UserRole) ?? UserRole.VIEWER;
-        session.user.status = (token.status as UserStatus) ?? UserStatus.PENDING;
-        session.user.displayName = (token as any).displayName ?? null;
-        session.user.avatarUrl = (token as any).avatarUrl ?? null;
-        session.user.bannerUrl = (token as any).bannerUrl ?? null;
-        session.user.handle = (token as any).handle ?? null;
-        session.user.pronouns = (token as any).pronouns ?? null;
-        session.user.bio = (token as any).bio ?? null;
-        session.user.locale = (token as any).locale ?? null;
-        session.user.timeZone = (token as any).timeZone ?? null;
-        session.user.theme = (token as any).theme ?? "system";
-        session.user.loginAlerts = (token as any).loginAlerts ?? false;
-        session.user.twoFactorEnabled = (token as any).twoFactorEnabled ?? false;
-        (session.user as any).notificationEmailOptIn = (token as any).notificationEmailOptIn ?? true;
-        (session.user as any).notificationPushOptIn = (token as any).notificationPushOptIn ?? false;
-        (session.user as any).notificationInAppOptIn = (token as any).notificationInAppOptIn ?? true;
-        (session.user as any).sessionId = (token as any).sessionId ?? null;
+        session.user = {
+          id: token.sub ?? session.user.id ?? "",
+          email: session.user.email ?? null,
+          name: session.user.name ?? null,
+          role: (token.role as UserRole) ?? UserRole.VIEWER,
+          status: (token.status as UserStatus) ?? UserStatus.PENDING,
+        } as typeof session.user & { role: UserRole; status: UserStatus };
       }
+      (session as any).sessionId = (token as any).sessionId ?? null;
       return session;
     },
   },

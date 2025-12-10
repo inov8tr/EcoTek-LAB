@@ -127,8 +127,8 @@ export function DashboardLayout({
           className="
             relative flex-1 overflow-y-auto border-l border-neutral-200 bg-white
             py-6 pr-6
-            pl-[96px]
-            lg:pl-[96px]
+            pl-24
+            lg:pl-24
             lg:pr-8
             shadow-sm
           "
