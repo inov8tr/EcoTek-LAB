@@ -48,7 +48,11 @@ export default async function PmaListPage({
             </p>
           }
         >
-          <Button asChild className="rounded-full">
+          <Button
+            asChild
+            variant="secondary"
+            className="rounded-full px-5 py-2 shadow-sm border-brand-primary text-brand-primary hover:bg-brand-primary/5"
+          >
             <Link href={"/pma/new" as Route}>Create PMA</Link>
           </Button>
         </ViewModeGate>

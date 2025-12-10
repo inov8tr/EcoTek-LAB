@@ -58,7 +58,7 @@ export function LineTrendChart<T extends ChartDatum>({
 
   return (
     <div className="h-72 w-full">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="4 4" stroke="var(--color-border-subtle)" />
           <XAxis

@@ -60,7 +60,10 @@ export default async function BinderTestsPage({ searchParams }: BinderTestsPageP
         </div>
         {canCreate && (
           <Link href={"/binder-tests/new" as Route}>
-            <Button>
+            <Button
+              variant="secondary"
+              className="rounded-full border-brand-primary text-brand-primary hover:bg-brand-primary/5"
+            >
               <PlusCircle className="mr-2 h-4 w-4" />
               New Binder Test
             </Button>
@@ -119,7 +122,11 @@ export default async function BinderTestsPage({ searchParams }: BinderTestsPageP
             actions={
               canCreate && (
                 <Link href={"/binder-tests/new" as Route}>
-                  <Button size="sm">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="rounded-full border-brand-primary text-brand-primary hover:bg-brand-primary/5"
+                  >
                     <PlusCircle className="mr-2 h-4 w-4" />
                     New Binder Test
                   </Button>

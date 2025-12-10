@@ -50,7 +50,7 @@ export function RadarComparisonChart<T extends RadarDatum>({
 
   return (
     <div className="h-80 w-full">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         <RadarChart data={data}>
           <PolarGrid stroke="var(--color-border-subtle)" />
           <PolarAngleAxis
