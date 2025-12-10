@@ -21,6 +21,7 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
   const [allFiles, setAllFiles] = useState<File[]>([]);
   const [showUploader, setShowUploader] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [parsePdf, setParsePdf] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   function handleFiles(files: FileList | null) {
@@ -29,6 +30,11 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
   }
 
   async function handleSubmit(formData: FormData) {
+    const hasPdf = allFiles.some((f) => f.type.toLowerCase().includes("pdf"));
+    if (!hasPdf) {
+      alert("Please attach a PDF test report.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       allFiles.forEach((file) => {
@@ -41,13 +47,14 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
           formData.append("videos", file);
         }
       });
+      formData.set("parsePdf", parsePdf ? "on" : "off");
 
       const res = await fetch("/api/binder-tests", {
         method: "POST",
         body: formData,
       });
 
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) throw new Error((await res.text()) || "Request failed");
 
       const json = await res.json();
 
@@ -55,7 +62,8 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
 
     } catch (err) {
       console.error(err);
-      alert("Failed to create binder test");
+      const msg = err instanceof Error ? err.message : "Failed to create binder test";
+      alert(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -119,8 +127,17 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
           Open uploader
         </Button>
         <p className="text-xs text-muted-foreground">
-          Add report PDF, photos, and videos; we’ll categorize them automatically.
+          Add report PDF (required), photos, and videos; we’ll categorize them automatically.
         </p>
+        <label className="flex items-center gap-2 text-sm text-[var(--color-text-heading)]">
+          <input
+            type="checkbox"
+            checked={parsePdf}
+            onChange={(e) => setParsePdf(e.target.checked)}
+            className="h-4 w-4"
+          />
+          <span>Parse test data from PDF</span>
+        </label>
       </div>
       {showUploader && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">

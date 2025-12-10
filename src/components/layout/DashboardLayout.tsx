@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { usePathname } from "next/navigation";
 import { MainNav } from "@/components/navigation/MainNav";
 import { DashboardBreadcrumbs } from "@/components/navigation/DashboardBreadcrumbs";
@@ -79,24 +80,66 @@ export function DashboardLayout({
   const pathname = usePathname() || "/dashboard";
   const { title, description } = getPageMeta(pathname);
 
+  // Measure header height (dynamic)
+  const [headerHeight, setHeaderHeight] = useState(64);
+  const headerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const measure = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight);
+      }
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  const cssVars: CSSProperties = {
+    ["--header-height" as string]: `${headerHeight}px`,
+  };
+
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--color-bg-main)]">
-      <div
-        className="transition-[padding] pr-4 sm:pr-6 lg:pr-8"
-        style={{ paddingLeft: "var(--sidebar-offset)" }}
+    <div
+      className="flex min-h-screen flex-col bg-[var(--color-bg-main)]"
+      style={cssVars}
+    >
+      {/* GLOBAL HEADER — FIXED */}
+      <header
+        ref={headerRef}
+        className="sticky top-0 z-[60] w-full bg-[var(--color-bg-main)]"
       >
         <MainNav currentUser={currentUser} />
-      </div>
+      </header>
 
-      <div className="flex flex-1 min-h-0">
-        <Sidebar userName={currentUser.name ?? currentUser.email ?? "User"} userRole={currentUser.role} />
+      {/* MAIN WRAPPER: sidebar + content */}
+      <div className="flex flex-1 min-h-0 relative">
+        {/* SIDEBAR (fixed or drawer mode handled inside component) */}
+        <Sidebar
+          userName={currentUser.name ?? currentUser.email ?? "User"}
+          userRole={currentUser.role}
+          userAvatarUrl={currentUser.avatarUrl}
+        />
 
+        {/* MAIN CONTENT — NO PADDING-LEFT LOGIC NEEDED */}
         <main
-          className="flex-1 min-h-0 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 transition-[padding]"
-          style={{ paddingLeft: "var(--sidebar-offset)" }}
+          className="
+            flex-1 min-h-0 overflow-y-auto
+            px-4 pt-[10px] pb-6 sm:px-6 lg:px-8
+            relative z-0
+          "
+          style={{ paddingLeft: "calc(var(--sidebar-offset, 72px) + 8px)" }}
         >
-          <header className="sticky top-0 z-10 mb-6 rounded-2xl border border-border-subtle bg-white/90 px-4 py-4 backdrop-blur">
+          {/* PAGE HEADER (sticky INSIDE CONTENT AREA) */}
+          <div
+            className="
+              relative z-[5]
+              mb-6 rounded-2xl border border-border/60
+              bg-card/95 px-4 py-4 shadow-md backdrop-blur-md
+            "
+          >
             <DashboardBreadcrumbs />
+
             <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h1 className="text-xl font-semibold text-[var(--color-text-heading)]">
@@ -108,10 +151,12 @@ export function DashboardLayout({
                   </p>
                 )}
               </div>
+
               <div className="flex items-center gap-2" />
             </div>
-          </header>
+          </div>
 
+          {/* PAGE BODY */}
           <div className="space-y-6">{children}</div>
         </main>
       </div>

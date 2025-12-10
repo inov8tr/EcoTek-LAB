@@ -21,7 +21,50 @@ const config: Config = {
     },
     extend: {
       colors: {
-        ...colors,
+        neutral: {
+          canvas: "#F8F9FC",
+          section: "#F2F4F7",
+          card: "#FFFFFF",
+          cardSecondary: "#F6F7FA",
+          borderSoft: "#E3E8EF",
+          borderStrong: "#D0D5DD",
+        },
+        text: {
+          heading: "#1B1C1E",
+          body: "#2E2F31",
+          muted: "#667085",
+          disabled: "#98A2B3",
+        },
+        primary: {
+          DEFAULT: "#24548F",
+          hover: "#1D4475",
+          light: "#E6EEF8",
+          border: "#B3C9E6",
+        },
+        eco: {
+          green: "#2FA94B",
+          dark: "#1F7A36",
+          light: "#E6F8EB",
+        },
+        success: {
+          light: "#E8F5E9",
+          border: "#A2D5AB",
+          dark: "#1E7E34",
+        },
+        warning: {
+          light: "#FFF8E6",
+          border: "#F4D988",
+          dark: "#B86100",
+        },
+        error: {
+          light: "#FDECEA",
+          border: "#F5A9A1",
+          dark: "#B42318",
+        },
+        analytics: {
+          purple: "#6F56E8",
+          light: "#EFEAFF",
+        },
         "text-main": "var(--color-text-main)",
         "text-heading": "var(--color-text-heading)",
         "text-link": "var(--color-text-link)",

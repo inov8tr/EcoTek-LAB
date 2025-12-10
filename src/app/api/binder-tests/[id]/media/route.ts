@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { uploadBinderAsset } from "@/lib/binder/upload";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { UserRole } from "@prisma/client";
 
@@ -22,20 +20,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return new NextResponse("Missing file or type", { status: 400 });
   }
 
-  try {
-    const url = await uploadBinderAsset(id, type, file);
-    const record = await prisma.binderTestDataMedia.create({
-      data: {
-        binderTestId: id,
-        mediaUrl: url,
-        mediaType: type,
-        label: type === "image" ? "Photo" : "Video",
-      },
-    });
-
-    return NextResponse.json({ id: record.id });
-  } catch (err) {
-    console.error(err);
-    return new NextResponse("Upload failed", { status: 500 });
-  }
+  console.warn(`Binder test media upload hit for ${id}, but legacy BinderTestDataMedia is removed.`);
+  return new NextResponse("Binder test media upload is not available in this build.", { status: 410 });
 }

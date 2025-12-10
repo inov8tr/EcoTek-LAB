@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  portal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecotek_portal_dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=1
+    volumes:
+      - .:/app        # mount your project code
+      - /app/node_modules  # keep node_modules isolated inside container

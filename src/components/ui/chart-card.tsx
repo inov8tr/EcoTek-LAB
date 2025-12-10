@@ -16,16 +16,16 @@ export function ChartCard({
   return (
     <section
       className={cn(
-        "rounded-2xl border border-border bg-[var(--color-card-light)] p-6 shadow-sm",
+        "rounded-2xl border border-[#E3E8EF] bg-[#FFFFFF] p-6 shadow-sm",
         className
       )}
     >
       <div className="mb-4 space-y-1">
-        <h3 className="text-lg font-semibold text-[var(--color-text-heading)]">
+        <h3 className="text-lg font-semibold text-[#1B1C1E]">
           {title}
         </h3>
         {description && (
-          <p className="text-sm text-[var(--color-text-muted)]">
+          <p className="text-sm text-[#667085]">
             {description}
           </p>
         )}

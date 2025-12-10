@@ -15,7 +15,6 @@ export default async function CapsuleDetailPage({ params }: PageProps) {
   const capsule = await prisma.capsuleFormula.findUnique({
     where: { id: resolved.id },
     include: {
-      materials: { orderBy: { createdAt: "asc" } },
       pmaFormulas: {
         include: {
           bitumenOrigin: true,
@@ -53,17 +52,6 @@ export default async function CapsuleDetailPage({ params }: PageProps) {
           </Link>
         </div>
       </div>
-
-      <DashboardCard title="Materials" description="Totals must equal 100%.">
-        <ul className="space-y-2 text-sm text-[var(--color-text-main)]">
-          {capsule.materials.map((m) => (
-            <li key={m.id} className="flex items-center justify-between rounded-lg border border-border-subtle px-3 py-2 bg-white/70">
-              <span>{m.materialName}</span>
-              <span className="font-semibold">{m.percentage}%</span>
-            </li>
-          ))}
-        </ul>
-      </DashboardCard>
 
       <DashboardCard title="Linked PMA Formulas">
         {capsule.pmaFormulas.length === 0 ? (

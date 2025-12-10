@@ -11,7 +11,7 @@ export async function GET() {
 
   const formulas = await prisma.pmaFormula.findMany({
     include: {
-      capsuleFormula: { include: { materials: true } },
+      capsuleFormula: true,
       bitumenOrigin: true,
       bitumenTest: true,
       batches: true,

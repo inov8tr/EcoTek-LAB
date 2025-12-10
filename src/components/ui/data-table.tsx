@@ -19,12 +19,15 @@ export function DataTable<T extends object>({
 }: DataTableProps<T>) {
   return (
     <div className={cn("space-y-4", className)}>
-      <div className="hidden overflow-x-auto rounded-2xl border border-border md:block">
-        <table className="w-full table-auto border-separate border-spacing-y-2 text-left">
-          <thead>
-            <tr className="text-sm text-[var(--color-text-muted)]">
+      <div className="hidden overflow-x-auto rounded-2xl border border-[#E3E8EF] bg-[#FFFFFF] md:block">
+        <table className="w-full table-auto text-left">
+          <thead className="bg-[#F2F4F7] text-[#667085]">
+            <tr className="text-xs uppercase tracking-wide">
               {columns.map((column) => (
-                <th key={column.key as string} className="px-4 pb-2 font-medium">
+                <th
+                  key={column.key as string}
+                  className="px-4 py-3 font-semibold border-b border-[#E3E8EF]"
+                >
                   {column.header}
                 </th>
               ))}
@@ -41,14 +44,11 @@ export function DataTable<T extends object>({
                 <tr
                   key={rowKey}
                   className={cn(
-                    "rounded-2xl border border-border transition-colors",
-                    idx % 2 === 0
-                      ? "bg-white"
-                      : "bg-[var(--color-bg-alt)]/80",
+                    "border-b border-[#E3E8EF] bg-[#FFFFFF] transition-colors hover:bg-[#F6F7FA]",
                   )}
                 >
                   {columns.map((column) => (
-                    <td key={column.key as string} className="px-4 py-3 text-sm">
+                    <td key={column.key as string} className="px-4 py-3 text-sm text-[#2E2F31]">
                       {column.render
                         ? column.render(item)
                         : String(record[column.key as string] ?? "")}
@@ -71,14 +71,14 @@ export function DataTable<T extends object>({
           return (
             <div
               key={`stacked-${rowKey}`}
-              className="rounded-2xl border border-border bg-white p-4 shadow-sm"
+              className="rounded-2xl border border-[#E3E8EF] bg-[#FFFFFF] p-4 shadow-sm"
             >
               {columns.map((column) => (
                 <div key={`stacked-${column.key as string}`} className="flex flex-col py-1">
-                  <span className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--color-text-muted)]">
+                  <span className="text-xs font-semibold uppercase tracking-[0.3em] text-[#667085]">
                     {column.header}
                   </span>
-                  <span className="text-sm text-[var(--color-text-heading)]">
+                  <span className="text-sm text-[#1B1C1E]">
                     {column.render
                       ? column.render(item)
                       : String(record[column.key as string] ?? "")}

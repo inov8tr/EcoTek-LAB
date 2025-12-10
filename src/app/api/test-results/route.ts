@@ -56,11 +56,8 @@ function toNumber(value: unknown) {
 }
 
 async function resolveThresholds(standardId?: number | null) {
-  if (!standardId) {
-    return DEFAULT_KOREA_PMA_PG82_22;
-  }
-  const record = await prisma.testStandard.findUnique({ where: { id: standardId } });
-  return buildThresholdsFromStandard(record ?? undefined);
+  // Legacy standards lookup is not available; fallback to default thresholds.
+  return DEFAULT_KOREA_PMA_PG82_22;
 }
 
 export async function GET(req: Request) {

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { runHybridExtractionForBinderTest } from "@/lib/binder/hybridExtraction";
 import { BINDER_BASE_PATH, sanitizeTestName, ensureBinderFolders, saveBinderTestFile } from "@/lib/binder/storage";
+import { captureClientMetadata } from "@/lib/security-events";
 
 export const runtime = "nodejs";
 
@@ -39,8 +40,13 @@ export async function POST(req: NextRequest) {
   const pdfFile = formData.get("pdfReport") as File | null;
   const photos = (formData.getAll("photos") as File[]).filter(Boolean);
   const videos = (formData.getAll("videos") as File[]).filter(Boolean);
+  const parsePdf = formData.get("parsePdf") === "on";
 
   try {
+    if (!pdfFile || pdfFile.size === 0) {
+      return new NextResponse("PDF report is required.", { status: 400 });
+    }
+
     const binderTest = await prisma.binderTest.create({
       data: {
         ...payload,
@@ -119,45 +125,84 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Run hybrid extraction
-    const folderPath = path.join(BINDER_BASE_PATH, folderName);
-    const extraction = await runHybridExtractionForBinderTest(folderPath);
+    let extraction:
+      | {
+          data: Record<string, any>;
+          usedAi: boolean;
+          sources: any;
+        }
+      | null = null;
 
-    // Save parsed deterministic JSON
-    const metadataDir = path.join(folderPath, "metadata");
-    fs.mkdirSync(metadataDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(metadataDir, "parsed_deterministic.json"),
-      JSON.stringify(extraction.data, null, 2)
-    );
-    if (extraction.usedAi) {
-      const aiDir = path.join(folderPath, "ai");
-      fs.mkdirSync(aiDir, { recursive: true });
-      fs.writeFileSync(path.join(aiDir, "ai_extraction.json"), JSON.stringify(extraction.data, null, 2));
+    if (parsePdf) {
+      try {
+        const folderPath = path.join(BINDER_BASE_PATH, folderName);
+        extraction = await runHybridExtractionForBinderTest(folderPath);
+
+        // Save parsed deterministic JSON
+        const metadataDir = path.join(folderPath, "metadata");
+        fs.mkdirSync(metadataDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(metadataDir, "parsed_deterministic.json"),
+          JSON.stringify(extraction.data, null, 2)
+        );
+        if (extraction.usedAi) {
+          const aiDir = path.join(folderPath, "ai");
+          fs.mkdirSync(aiDir, { recursive: true });
+          fs.writeFileSync(path.join(aiDir, "ai_extraction.json"), JSON.stringify(extraction.data, null, 2));
+        }
+
+        await prisma.binderTest.update({
+          where: { id: binderTest.id },
+          data: {
+            pgHigh: extraction.data.pgHigh,
+            pgLow: extraction.data.pgLow,
+            softeningPointC: extraction.data.softeningPointC,
+            viscosity155_cP: extraction.data.viscosity155_cP,
+            ductilityCm: extraction.data.ductilityCm,
+            recoveryPct: extraction.data.recoveryPct,
+            jnr_3_2: extraction.data.jnr_3_2,
+            dsrData: extraction.data.dsrData as Prisma.InputJsonValue,
+            aiExtractedData: extraction.usedAi
+              ? ({ data: extraction.data, sources: extraction.sources } as unknown as Prisma.InputJsonValue)
+              : Prisma.DbNull,
+            status: "PENDING_REVIEW",
+          },
+        });
+      } catch (parseErr) {
+        console.error("PDF parse failed", parseErr);
+        // Keep submission but mark status pending review, let user fix manually
+        await prisma.binderTest.update({
+          where: { id: binderTest.id },
+          data: { status: "PENDING_REVIEW" },
+        });
+      }
     }
 
-    await prisma.binderTest.update({
-      where: { id: binderTest.id },
+    const meta = await captureClientMetadata();
+    await prisma.securityEvent.create({
       data: {
-        pgHigh: extraction.data.pgHigh,
-        pgLow: extraction.data.pgLow,
-        softeningPointC: extraction.data.softeningPointC,
-        viscosity155_cP: extraction.data.viscosity155_cP,
-        ductilityCm: extraction.data.ductilityCm,
-        recoveryPct: extraction.data.recoveryPct,
-        jnr_3_2: extraction.data.jnr_3_2,
-        dsrData: extraction.data.dsrData as Prisma.InputJsonValue,
-        aiExtractedData: extraction.usedAi
-          ? ({ data: extraction.data, sources: extraction.sources } as unknown as Prisma.InputJsonValue)
-          : Prisma.DbNull,
-        status: "PENDING_REVIEW",
+        userId: user.id,
+        eventType: "BINDER_TEST_SUBMITTED",
+        detail: `Binder test submitted: ${testName}`,
+        ipAddress: meta.ip,
+        userAgent: meta.userAgent,
+      },
+    });
+    await prisma.securityEvent.create({
+      data: {
+        userId: user.id,
+        eventType: "BINDER_TEST_VERIFY_REQUEST",
+        detail: `Verification requested for binder test ${binderTest.id}`,
+        ipAddress: meta.ip,
+        userAgent: meta.userAgent,
       },
     });
 
     return NextResponse.json({ id: binderTest.id, folderName });
   } catch (err) {
-    console.error(err);
-    return new NextResponse("Failed to create binder test", { status: 500 });
+    console.error("Failed to create binder test", err);
+    const message = err instanceof Error ? err.message : "Failed to create binder test";
+    return new NextResponse(message, { status: 500 });
   }
 }
 

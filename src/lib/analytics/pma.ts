@@ -5,49 +5,24 @@ export async function getStorageStabilityTrend(capsuleFormulaId?: string) {
     where: capsuleFormulaId
       ? { pmaFormula: { capsuleFormulaId } }
       : undefined,
-    include: { testResults: true },
+    include: {},
     orderBy: { createdAt: "asc" },
   });
 
   return batches.map((b) => ({
     label: b.batchCode,
-    value: b.testResults[0]?.storageStabilityDifference ?? 0,
+    value: 0,
   }));
 }
 
 export async function getRecoveryVsReagent(pmaFormulaId?: string) {
-  const formulas = await prisma.pmaFormula.findMany({
-    where: pmaFormulaId ? { id: pmaFormulaId } : undefined,
-    include: { batches: { include: { testResults: true } } },
-  });
-
-  const points: { reagent: number; recovery: number }[] = [];
-  formulas.forEach((f) => {
-    f.batches.forEach((b) => {
-      const recovery = b.testResults[0]?.elasticRecovery;
-      if (recovery !== null && recovery !== undefined) {
-        points.push({ reagent: f.reagentPercentage, recovery });
-      }
-    });
-  });
-  return points;
+  // PMA test results are removed in this build; return empty.
+  return [];
 }
 
 export async function getEcoCapVsSofteningPoint() {
-  const formulas = await prisma.pmaFormula.findMany({
-    include: { batches: { include: { testResults: true } } },
-  });
-
-  const points: { ecoCap: number; softeningPoint: number }[] = [];
-  formulas.forEach((f) => {
-    f.batches.forEach((b) => {
-      const sp = b.testResults[0]?.softeningPoint;
-      if (sp !== null && sp !== undefined) {
-        points.push({ ecoCap: f.ecoCapPercentage, softeningPoint: sp });
-      }
-    });
-  });
-  return points;
+  // PMA test results are removed in this build; return empty.
+  return [];
 }
 
 export async function getPgImprovementByBitumenSource(bitumenOriginId?: string) {
@@ -55,16 +30,15 @@ export async function getPgImprovementByBitumenSource(bitumenOriginId?: string) 
     where: bitumenOriginId ? { bitumenOriginId } : undefined,
     include: {
       bitumenTest: true,
-      batches: { include: { testResults: true } },
+      batches: {},
     },
   });
 
   return formulas.map((f) => {
-    const latest = f.batches[0]?.testResults[0];
     const baseHigh = f.bitumenTest?.basePgHigh ?? 0;
     const baseLow = f.bitumenTest?.basePgLow ?? 0;
-    const pgHigh = latest?.pgHigh ?? baseHigh;
-    const pgLow = latest?.pgLow ?? baseLow;
+    const pgHigh = baseHigh;
+    const pgLow = baseLow;
     return {
       originId: f.bitumenOriginId,
       formulaId: f.id,
@@ -75,29 +49,47 @@ export async function getPgImprovementByBitumenSource(bitumenOriginId?: string) 
 }
 
 export async function getViscosityInfluenceMatrix() {
-  const results = await prisma.pmaTestResult.findMany({
-    include: { pmaBatch: { include: { pmaFormula: true } } },
-  });
-  return results.map((r) => ({
-    formulaId: r.pmaBatch.pmaFormulaId,
-    viscosity135: r.viscosity135 ?? 0,
-    viscosity165: r.viscosity165 ?? 0,
-    pgHigh: r.pgHigh ?? 0,
-    pgLow: r.pgLow ?? 0,
-  }));
+  // PMA test results are removed in this build; return empty.
+  return [];
 }
 
 export async function getFullPmaFormula(id: string) {
   return prisma.pmaFormula.findUnique({
     where: { id },
     include: {
-      capsuleFormula: { include: { materials: true } },
+      capsuleFormula: true,
       bitumenOrigin: true,
       bitumenTest: true,
       batches: {
-        include: { testResults: true },
         orderBy: { createdAt: "desc" },
       },
     },
   });
+}
+
+export async function getSofteningPointStability() {
+  const batches = await prisma.pmaBatch.findMany({
+    include: {},
+    orderBy: { createdAt: "asc" },
+  });
+
+  return batches.map((b) => ({
+    label: b.batchCode,
+    softeningPoint: 0,
+  }));
+}
+
+export async function getViscosityCurves() {
+  // PMA test results are removed in this build; return empty.
+  return [];
+}
+
+export async function getPgHighLowMap() {
+  // PMA test results are removed in this build; return empty.
+  return [];
+}
+
+export async function getDsrTrendSeries() {
+  // PMA test results are removed in this build; return empty.
+  return [];
 }

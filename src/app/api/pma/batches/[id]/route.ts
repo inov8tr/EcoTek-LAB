@@ -16,7 +16,7 @@ export async function GET(_req: Request, { params }: RouteParams) {
 
   const batch = await prisma.pmaBatch.findUnique({
     where: { id },
-    include: { testResults: true, pmaFormula: true },
+    include: { pmaFormula: true },
   });
   if (!batch) {
     return NextResponse.json({ error: "Batch not found" }, { status: 404 });
@@ -54,14 +54,6 @@ export async function DELETE(_req: Request, { params }: RouteParams) {
   const { id } = await params;
   const authResult = await guardApiUser({ roles: [UserRole.ADMIN], requireActive: true });
   if ("response" in authResult) return authResult.response;
-
-  const linked = await prisma.pmaTestResult.count({ where: { pmaBatchId: id } });
-  if (linked > 0) {
-    return NextResponse.json(
-      { error: "Cannot delete batch with linked test results" },
-      { status: 409 },
-    );
-  }
 
   try {
     await prisma.pmaBatch.delete({ where: { id } });

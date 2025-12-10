@@ -6,6 +6,7 @@ import type { Route } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { BINDER_BASE_PATH } from "@/lib/binder/storage";
+import { AdditionalDocsUploader } from "@/components/binder/AdditionalDocsUploader";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -49,6 +50,8 @@ export default async function BinderTestDocumentsPage({ params }: PageProps) {
           </Link>
         </div>
       </div>
+
+      <AdditionalDocsUploader binderTestId={id} />
 
       <DocumentSection title="Original Files" files={originals} />
       <DocumentSection title="AI Outputs" files={aiFiles} />

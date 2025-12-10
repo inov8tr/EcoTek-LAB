@@ -24,26 +24,12 @@ model Formulation {
   archived          Boolean                @default(false)
   archivedAt        DateTime?
   batches           Batch[]
-  components        FormulationComponent[]
 }
 
 model Material {
   id          Int                    @id @default(autoincrement())
   name        String                 @unique
   description String?
-  components  FormulationComponent[]
-}
-
-model FormulationComponent {
-  id            Int         @id @default(autoincrement())
-  formulation   Formulation @relation(fields: [formulationId], references: [id], onDelete: Cascade)
-  formulationId Int
-  material      Material?   @relation(fields: [materialId], references: [id])
-  materialId    Int?
-  materialName  String
-  percentage    Float
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
 }
 
 model Batch {
@@ -145,6 +131,8 @@ model BinderTest {
   aiConfidence    Float?
   manualEdits     Json?
   status          BinderTestStatus @default(PENDING_REVIEW)
+  archived        Boolean          @default(false)
+  archivedAt      DateTime?
   pmaFormula      PmaFormula?      @relation(fields: [pmaFormulaId], references: [id], onDelete: SetNull)
   documents       BinderTestDocument[]
 }
@@ -161,64 +149,6 @@ model BinderTestDocument {
   hash           String?
   createdAt      DateTime   @default(now())
   binderTest     BinderTest @relation(fields: [binderTestId], references: [id], onDelete: Cascade)
-}
-
-// Binder Test Data module (separate from existing BinderTest tied to batches)
-model BinderTestData {
-  id             String                 @id @default(uuid())
-  testName       String
-  batchId        String?
-  binderSource   String?
-  crmPercent     Float?
-  reagentPercent Float?
-  aerosilPercent Float?
-  operator       String?
-  lab            String?
-  status         String                 @default("Pending")
-  notes          String?
-  createdAt      DateTime               @default(now())
-
-  results        BinderTestDataResult[]
-  files          BinderTestDataFile[]
-  media          BinderTestDataMedia[]
-}
-
-model BinderTestDataResult {
-  id           String          @id @default(uuid())
-  binderTestId String
-  temperature  Float?
-  gOriginal    Float?
-  gRtfo        Float?
-  gPav         Float?
-  pgHigh       Int?
-  pgLow        Int?
-  passFail     String?
-  notes        String?
-  createdAt    DateTime        @default(now())
-
-  binderTest   BinderTestData  @relation(fields: [binderTestId], references: [id], onDelete: Cascade)
-}
-
-model BinderTestDataFile {
-  id           String         @id @default(uuid())
-  binderTestId String
-  fileUrl      String
-  fileType     String
-  label        String?
-  createdAt    DateTime       @default(now())
-
-  binderTest   BinderTestData @relation(fields: [binderTestId], references: [id], onDelete: Cascade)
-}
-
-model BinderTestDataMedia {
-  id           String         @id @default(uuid())
-  binderTestId String
-  mediaUrl     String
-  mediaType    String
-  label        String?
-  createdAt    DateTime       @default(now())
-
-  binderTest   BinderTestData @relation(fields: [binderTestId], references: [id], onDelete: Cascade)
 }
 
 model User {
@@ -366,24 +296,6 @@ model DeletionRequest {
   reviewer    User?        @relation("ReviewedDeletions", fields: [reviewerId], references: [id])
 }
 
-model TestStandard {
-  id                    Int      @id @default(autoincrement())
-  name                  String   @unique
-  description           String?
-  maxStorabilityPct     Float?
-  minSolubilityPct      Float?
-  maxJnr                Float?
-  minElasticRecoveryPct Float?
-  minSofteningPointC    Float?
-  minDuctilityCm        Float?
-  maxViscosityPaS       Float?
-  minPgHigh             Int?
-  maxPgLow              Int?
-  isDefault             Boolean  @default(false)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-}
-
 model Market {
   id        Int        @id @default(autoincrement())
   code      String     @unique
@@ -423,22 +335,13 @@ model CapsuleFormula {
   id          String                   @id @default(uuid())
   name        String
   description String?
+  archived    Boolean                  @default(false)
+  archivedAt  DateTime?
   createdById String?
   createdAt   DateTime                 @default(now())
   updatedAt   DateTime                 @updatedAt
   createdBy   User?                    @relation(fields: [createdById], references: [id])
-  materials   CapsuleFormulaMaterial[]
   pmaFormulas PmaFormula[]
-}
-
-model CapsuleFormulaMaterial {
-  id               String         @id @default(uuid())
-  capsuleFormulaId String
-  materialName     String
-  percentage       Float
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  capsuleFormula   CapsuleFormula @relation(fields: [capsuleFormulaId], references: [id], onDelete: Cascade)
 }
 
 model BitumenOrigin {
@@ -447,6 +350,8 @@ model BitumenOrigin {
   binderGrade   String
   originCountry String
   description   String?
+  archived      Boolean           @default(false)
+  archivedAt    DateTime?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   baseTests     BitumenBaseTest[]
@@ -507,32 +412,6 @@ model PmaBatch {
   updatedAt    DateTime        @updatedAt
   pmaFormula   PmaFormula      @relation(fields: [pmaFormulaId], references: [id], onDelete: Cascade)
   testedBy     User?           @relation(fields: [testedById], references: [id])
-  testResults  PmaTestResult[]
 
   @@unique([batchCode])
-}
-
-model PmaTestResult {
-  id                         String   @id @default(uuid())
-  pmaBatchId                 String
-  softeningPoint             Float?
-  viscosity135               Float?
-  viscosity165               Float?
-  ductility                  Float?
-  elasticRecovery            Float?
-  storageStabilityDifference Float?
-  pgHigh                     Int?
-  pgLow                      Int?
-  dsrOriginalTemp            Float?
-  dsrOriginalGOverSin        Float?
-  dsrRtfoTemp                Float?
-  dsrRtfoGOverSin            Float?
-  dsrPavTemp                 Float?
-  dsrPavGTimesSin            Float?
-  bbrTemp                    Float?
-  bbrStiffness               Float?
-  bbrMValue                  Float?
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
-  pmaBatch                   PmaBatch @relation(fields: [pmaBatchId], references: [id], onDelete: Cascade)
 }

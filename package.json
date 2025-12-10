@@ -14,7 +14,7 @@
     "db:seed": "prisma db seed"
   },
   "dependencies": {
-    "@prisma/client": "^5.19.1",
+    "@prisma/client": "5.22.0",
     "@radix-ui/react-slot": "^1.2.4",
     "@tanstack/react-table": "^8.20.4",
     "bcryptjs": "^3.0.3",
@@ -45,7 +45,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.0.6",
-    "prisma": "^5.19.1",
+    "prisma": "5.22.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"

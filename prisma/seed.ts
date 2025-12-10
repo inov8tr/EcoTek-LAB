@@ -32,10 +32,6 @@ async function seedAdminUser() {
 async function seedStandards() {
   await prisma.fileAttachment.deleteMany();
   await prisma.deletionRequest.deleteMany();
-  await prisma.binderTestDataMedia.deleteMany();
-  await prisma.binderTestDataFile.deleteMany();
-  await prisma.binderTestDataResult.deleteMany();
-  await prisma.binderTestData.deleteMany();
   await prisma.batch.deleteMany();
   await prisma.formulation.deleteMany();
   await prisma.standardRequirement.deleteMany();

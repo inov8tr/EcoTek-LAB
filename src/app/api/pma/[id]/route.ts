@@ -17,10 +17,10 @@ export async function GET(_req: Request, { params }: RouteParams) {
   const formula = await prisma.pmaFormula.findUnique({
     where: { id },
     include: {
-      capsuleFormula: { include: { materials: true } },
+      capsuleFormula: true,
       bitumenOrigin: true,
       bitumenTest: true,
-      batches: { include: { testResults: true } },
+      batches: true,
     },
   });
 

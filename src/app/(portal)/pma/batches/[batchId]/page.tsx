@@ -9,7 +9,7 @@ type PageProps = { params: { batchId: string } };
 export default async function PmaBatchDetailPage({ params }: PageProps) {
   const batch = await prisma.pmaBatch.findUnique({
     where: { id: params.batchId },
-    include: { pmaFormula: true, testResults: true },
+    include: { pmaFormula: true },
   });
 
   if (!batch) notFound();
@@ -36,27 +36,7 @@ export default async function PmaBatchDetailPage({ params }: PageProps) {
       </DashboardCard>
 
       <DashboardCard title="Test Results">
-        {batch.testResults.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-muted)]">No results recorded.</p>
-        ) : (
-          <ul className="space-y-2 text-sm text-[var(--color-text-main)]">
-            {batch.testResults.map((r) => (
-              <li
-                key={r.id}
-                className="grid gap-2 rounded-lg border border-border-subtle bg-white/70 px-3 py-2 md:grid-cols-2 lg:grid-cols-3"
-              >
-                <Metric label="Softening" value={r.softeningPoint} />
-                <Metric label="Viscosity 135" value={r.viscosity135} />
-                <Metric label="Viscosity 165" value={r.viscosity165} />
-                <Metric label="Ductility" value={r.ductility} />
-                <Metric label="Recovery" value={r.elasticRecovery} />
-                <Metric label="Storage Stability" value={r.storageStabilityDifference} />
-                <Metric label="PG High" value={r.pgHigh} />
-                <Metric label="PG Low" value={r.pgLow} />
-              </li>
-            ))}
-          </ul>
-        )}
+        <p className="text-sm text-[var(--color-text-muted)]">Test results are not tracked in this build.</p>
       </DashboardCard>
     </div>
   );

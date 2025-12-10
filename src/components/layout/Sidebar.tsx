@@ -1,260 +1,224 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
+import { Menu, X, PanelLeftOpen, PanelLeftClose, Settings } from "lucide-react";
 
-import {
-  LayoutDashboard,
-  Settings,
-  BarChart3,
-  Menu,
-  X,
-  User,
-  Home,
-  ArrowLeft,
-  FileText,
-  ChevronLeft,
-  ChevronRight,
-  Droplets,
-  FlaskConical,
-  TestTube,
-} from "lucide-react";
-
-import { Button } from "@/components/ui/button";
 import { LogoutButton } from "@/components/navigation/LogoutButton";
-
-type SidebarItem = {
-  id: string;
-  name: string;
-  href: string;
-  icon: typeof Home;
-  description?: string;
-};
-
-type SidebarModeConfig = {
-  headerButtons: SidebarItem[];
-  navigation: SidebarItem[];
-};
+import { sidebarSections } from "@/components/navigation/sidebar-nav-config";
+import { SidebarSection } from "@/components/navigation/SidebarSection";
 
 interface SidebarProps {
   userName: string;
   userRole: "ADMIN" | "RESEARCHER" | "VIEWER" | string;
   userCategory?: string | null;
   variant?: "dashboard" | "page";
+  userAvatarUrl?: string | null;
 }
 
-/* ---------------- GLOBAL NAVIGATION ---------------- */
-const globalNav: SidebarItem[] = [
-  { id: "global-dashboard", name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, description: "Overview of activity" },
-  { id: "global-capsules", name: "Capsule Formulas", href: "/capsules", icon: FlaskConical, description: "Manage EcoCap capsule formulas" },
-  { id: "global-pma", name: "PMA Formulas", href: "/pma", icon: TestTube, description: "Combine capsules and bitumen" },
-  { id: "global-bitumen-origins", name: "Bitumen Origins", href: "/bitumen/origins", icon: Droplets, description: "Refinery sources and suppliers" },
-  { id: "global-binder-tests", name: "Binder Test Data", href: "/binder-tests", icon: FileText, description: "PDFs, photos, videos, results" },
-  { id: "global-analytics", name: "Analytics", href: "/analytics", icon: BarChart3, description: "Reports and insights" },
-  { id: "global-resources", name: "Resources", href: "/resources", icon: FileText, description: "Docs and SOPs" },
-  { id: "global-settings", name: "Settings", href: "/settings", icon: Settings, description: "Configure preferences" },
-];
+const COLLAPSE_KEY = "ecotek.sidebar.collapsed";
+const EXPANDED_WIDTH = 288; // 18rem
+const COLLAPSED_WIDTH = 72; // 4.5rem
 
-/* ---------------- ADMIN NAVIGATION ---------------- */
-const adminNav: SidebarItem[] = [
-  { id: "admin-home", name: "Admin Home", href: "/admin", icon: LayoutDashboard },
-  { id: "admin-users", name: "Users", href: "/admin/users", icon: User },
-  { id: "admin-standards", name: "Standards", href: "/admin/standards", icon: Settings },
-  { id: "admin-settings", name: "System Settings", href: "/admin/settings", icon: Settings },
-  { id: "admin-binder-tests", name: "Binder Test Data", href: "/binder-tests", icon: FileText },
-  { id: "admin-database", name: "Database", href: "/admin/database", icon: Settings },
-];
+// Ensure your header defines this: :root { --header-height: 64px; }
+const HEADER_VAR = "var(--header-height, 64px)";
 
-const sidebarModes: Record<"dashboardRoot" | "adminOverview" | "adminPage" | "default", SidebarModeConfig> = {
-  dashboardRoot: {
-    headerButtons: [{ id: "header-dashboard", name: "Dashboard", href: "/dashboard", icon: Home }],
-    navigation: globalNav,
-  },
-  adminOverview: {
-    headerButtons: [{ id: "header-dashboard", name: "Dashboard", href: "/dashboard", icon: Home }],
-    navigation: adminNav,
-  },
-  adminPage: {
-    headerButtons: [
-      { id: "header-dashboard", name: "Dashboard", href: "/dashboard", icon: Home },
-      { id: "header-back-to-admin", name: "Back To Admin", href: "/admin", icon: ArrowLeft },
-    ],
-    navigation: adminNav,
-  },
-  default: {
-    headerButtons: [{ id: "header-dashboard", name: "Dashboard", href: "/dashboard", icon: Home }],
-    navigation: globalNav,
-  },
-};
-
-export function Sidebar({ userName, userRole, userCategory, variant = "dashboard" }: SidebarProps) {
-  const pathname = usePathname();
+export function Sidebar({ userName, userRole, userCategory, variant = "dashboard", userAvatarUrl }: SidebarProps) {
+  const pathname = usePathname() || "/";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [hoverExpanded, setHoverExpanded] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [openSection, setOpenSection] = useState<string | null>(null);
+  const hoverTimer = useRef<NodeJS.Timeout | null>(null);
 
-  let modeKey: keyof typeof sidebarModes = "default";
-  if (pathname === "/dashboard") modeKey = "dashboardRoot";
-  else if (pathname === "/admin") modeKey = "adminOverview";
-  else if (pathname?.startsWith("/admin")) modeKey = "adminPage";
-
-  const { headerButtons, navigation } = sidebarModes[modeKey];
-  const hasHeaderDashboard = headerButtons.some((btn) => btn.href === "/dashboard");
-  const baseNav = hasHeaderDashboard ? navigation.filter((item) => item.href !== "/dashboard") : navigation;
-
-  const sidebarNavigation =
-    userRole === "VIEWER"
-      ? baseNav.filter((item) => item.id !== "global-binder-tests" && item.id !== "admin-binder-tests")
-      : baseNav;
+  const findActiveSection = useMemo(
+    () =>
+      sidebarSections.find((section) =>
+        section.children.some((child) => pathname === child.href || pathname.startsWith(`${child.href}/`)),
+      )?.id ?? sidebarSections[0]?.id,
+    [pathname],
+  );
 
   useEffect(() => {
+    setOpenSection(findActiveSection);
+  }, [findActiveSection]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(COLLAPSE_KEY);
+    if (stored === "1") setCollapsed(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(COLLAPSE_KEY, collapsed ? "1" : "0");
+  }, [collapsed]);
+
+  // Ensure open/close state follows active section
+  useEffect(() => {
+    if (collapsed) {
+      setOpenSection(null);
+    } else {
+      setOpenSection(findActiveSection);
+    }
+  }, [collapsed, findActiveSection]);
+
+  // Desktop detection + correct offset application
+  useEffect(() => {
+    if (typeof document === "undefined") return;
     const root = document.documentElement;
+
     const applyOffset = () => {
-      const isDesktop = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
-      const value = isDesktop ? (isDesktopCollapsed ? "3rem" : "20rem") : "0rem";
-      root.style.setProperty("--sidebar-offset", value);
+      const desktop = window.matchMedia("(min-width: 1024px)").matches;
+      setIsDesktop(desktop);
+
+      // Corrected logic: offset matches actual sidebar width
+      const offset = desktop ? (collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH) : 0;
+      root.style.setProperty("--sidebar-offset", `${offset}px`);
     };
 
     applyOffset();
     window.addEventListener("resize", applyOffset);
+
     return () => {
       window.removeEventListener("resize", applyOffset);
-      root.style.setProperty("--sidebar-offset", "0rem");
+      root.style.setProperty("--sidebar-offset", "0px");
     };
-  }, [isDesktopCollapsed]);
+  }, [collapsed]);
 
-  const sidebarClasses =
-    variant === "dashboard"
-      ? "top-0 h-screen lg:top-4 lg:h-[calc(100vh-2rem)]"
-      : "top-0 h-screen lg:top-4 lg:h-[calc(100vh-2rem)]";
+  const handleSectionToggle = (id: string) => {
+    setOpenSection((prev) => (prev === id ? null : id));
+  };
+
+  const onNavigate = () => {
+    setIsMobileMenuOpen(false);
+    setCollapsed(true);
+  };
+
+  // Disable body scroll when mobile drawer is open
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobileMenuOpen]);
+
+  const effectiveCollapsed = collapsed && !hoverExpanded;
+
+  const handleMouseEnter = () => {
+    if (!isDesktop || !collapsed) return;
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => setHoverExpanded(true), 150);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    setHoverExpanded(false);
+  };
 
   return (
     <>
-      {/* MOBILE MENU BUTTON */}
+      {/* Mobile trigger */}
       <div className="fixed left-4 top-4 z-50 lg:hidden">
-        <Button
-          variant="outline"
-          className="h-10 w-10 p-0 bg-card/90 shadow-lg backdrop-blur-md"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        <button
+          type="button"
+          aria-label="Toggle navigation"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E3E8EF] bg-white shadow-sm"
+          onClick={() => setIsMobileMenuOpen((v) => !v)}
         >
           {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        </button>
       </div>
 
+      {/* Google Admin–style overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />
+        <div
+          className="fixed inset-0 bg-black/40 z-[30] lg:hidden"
+          aria-hidden="true"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
       )}
-
-      {/* COLLAPSE BUTTON */}
-      <div
-        className="fixed top-4 z-50 hidden lg:block transition-all duration-300"
-        style={{ left: isDesktopCollapsed ? "1rem" : "18rem" }}
-      >
-        <Button
-          variant="outline"
-          className="h-10 w-10 p-0 bg-card/95 shadow-lg backdrop-blur-md"
-          onClick={() => setIsDesktopCollapsed((prev) => !prev)}
-        >
-          {isDesktopCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-        </Button>
-      </div>
 
       {/* SIDEBAR */}
       <aside
-        className={`fixed left-0 lg:left-4 z-40 flex w-72 flex-col border border-border/40 bg-card/95 shadow-2xl backdrop-blur-md transition-transform duration-300 lg:rounded-3xl ${
-          sidebarClasses
-        } ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} ${
-          isDesktopCollapsed ? "lg:-translate-x-full" : "lg:translate-x-0"
-        }`}
+        className={`fixed left-0 z-[40] flex flex-col border-r border-[#E3E8EF] bg-[#F8F9FC] shadow-md transition-[width,transform] duration-200 overflow-hidden
+          ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+        `}
+        style={{
+          width: effectiveCollapsed ? `${COLLAPSED_WIDTH}px` : `${EXPANDED_WIDTH}px`,
+          top: HEADER_VAR,
+          height: `calc(100vh - ${HEADER_VAR})`,
+        }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
-        {/* LOGO */}
-        <div className="border-b border-border/40 p-6">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/EcoTek Logo.svg"
-              alt="EcoTek Logo"
-              width={64}
-              height={28}
-              className="h-auto w-auto max-w-[64px]"
-              priority
-            />
-            <p className="text-lg font-semibold opacity-80">Revitalizing the Future</p>
-          </div>
+        {/* Top utility area */}
+        <div className="flex items-center gap-3 border-b border-[#E3E8EF] bg-white px-3 py-3">
+          {!effectiveCollapsed && (
+            <div className="flex min-w-0 flex-col p-[10px]">
+              <span className="text-xs font-semibold uppercase tracking-[0.25em] text-[#667085]">Workspace</span>
+              <span className="truncate text-sm font-semibold text-[#1B1C1E]">EcoTek R&D Portal</span>
+            </div>
+          )}
         </div>
 
-        {/* HEADER BUTTONS */}
-        {headerButtons.length > 0 && (
-          <div className="border-b border-border/40 p-4">
-            <div className="space-y-2">
-              {headerButtons.map((button) => {
-                const Icon = button.icon;
-                return (
-                  <Link key={button.id} href={button.href as Route} onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button variant="outline" className="w-full justify-start gap-2 shadow-sm">
-                      <Icon className="h-4 w-4" />
-                      {button.name}
-                    </Button>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* NAV MENU */}
-        <nav className="flex-1 overflow-y-auto p-4">
-          <ul className="space-y-2">
-            {sidebarNavigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
-
-              return (
-                <li key={item.id}>
-                  <Link
-                    href={item.href as Route}
-                    className={`group flex items-start gap-3 rounded-lg border p-4 transition-all duration-200 ${
-                      isActive
-                        ? "border-border/60 bg-accent/60 shadow-md"
-                        : "border-transparent hover:border-border/50 hover:bg-accent/50 hover:shadow-md"
-                    }`}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary transition-transform group-hover:scale-110" />
-                    <div>
-                      <div className="font-semibold text-foreground">{item.name}</div>
-                      {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
+          {sidebarSections.map((section) => (
+            <SidebarSection
+              key={section.id}
+              section={section}
+              collapsed={effectiveCollapsed}
+              isOpen={openSection === section.id}
+              onToggle={handleSectionToggle}
+              pathname={pathname}
+              onNavigate={onNavigate}
+            />
+          ))}
         </nav>
 
-        {/* USER + LOGOUT */}
-        <div className="border-t border-border/40 p-4">
-          <div className="rounded-lg bg-accent/30 p-4 shadow-md">
-            <div className="mb-2 flex items-center gap-2">
-              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
-                {userName.charAt(0)}
+        {/* Bottom utility */}
+        <div className="border-t border-[#E3E8EF] bg-white px-3 py-3">
+          <div className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} p-[10px]`}>
+            {userAvatarUrl ? (
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[#E3E8EF]">
+                <Image src={userAvatarUrl} alt={userName} fill className="object-cover" sizes="40px" />
               </div>
+            ) : (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E6EEF8] text-sm font-bold text-[#24548F]">
+                {userName.charAt(0).toUpperCase()}
+              </div>
+            )}
+
+            {!effectiveCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-foreground">{userName}</p>
-                <span
-                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    userCategory?.toLowerCase() === "admin" || userRole === "ADMIN"
-                      ? "bg-blue-500/90 text-white"
-                      : "bg-amber-500/90 text-white"
-                  }`}
-                >
+                <p className="truncate text-sm font-semibold text-[#1B1C1E]">{userName}</p>
+                <span className="inline-block rounded-full border border-[#D0D5DD] px-2 py-0.5 text-[11px] font-semibold text-[#667085]">
                   {userCategory || userRole}
                 </span>
               </div>
-            </div>
+            )}
+          </div>
 
-            <LogoutButton />
+          {/* Settings + Logout */}
+          <div className={`mt-3 flex items-center ${effectiveCollapsed ? "justify-center gap-2" : "gap-2"}`}>
+            <Link
+              href={"/settings" as Route}
+              className={`flex items-center justify-center gap-2 rounded-2xl border border-[#D0D5DD] text-sm font-semibold text-[#1B1C1E] transition hover:bg-[#F8F9FC] ${
+                effectiveCollapsed ? "h-10 w-10" : "px-3 py-2"
+              }`}
+              aria-label="Settings"
+            >
+              <Settings className="h-4 w-4" />
+              {!effectiveCollapsed && <span>Settings</span>}
+            </Link>
+
+            <LogoutButton iconOnly={effectiveCollapsed} />
           </div>
         </div>
       </aside>

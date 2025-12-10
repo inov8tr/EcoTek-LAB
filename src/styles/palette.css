@@ -1,0 +1,39 @@
+:root {
+  /* EcoTek 10/10 palette variables (optional use) */
+  --color-canvas: #F8F9FC;
+  --color-text-body: #2E2F31;
+
+  --color-neutral-section: #F2F4F7;
+  --color-neutral-card: #FFFFFF;
+  --color-neutral-card-secondary: #F6F7FA;
+  --color-neutral-border-soft: #E3E8EF;
+  --color-neutral-border-strong: #D0D5DD;
+
+  --color-text-heading-strong: #1B1C1E;
+  --color-text-muted-strong: #667085;
+  --color-text-disabled: #98A2B3;
+
+  --color-primary: #24548F;
+  --color-primary-hover: #1D4475;
+  --color-primary-light: #E6EEF8;
+  --color-primary-border: #B3C9E6;
+
+  --color-eco-green: #2FA94B;
+  --color-eco-dark: #1F7A36;
+  --color-eco-light: #E6F8EB;
+
+  --color-success-light: #E8F5E9;
+  --color-success-border: #A2D5AB;
+  --color-success-dark: #1E7E34;
+
+  --color-warning-light: #FFF8E6;
+  --color-warning-border: #F4D988;
+  --color-warning-dark: #B86100;
+
+  --color-error-light: #FDECEA;
+  --color-error-border: #F5A9A1;
+  --color-error-dark: #B42318;
+
+  --color-analytics-purple: #6F56E8;
+  --color-analytics-light: #EFEAFF;
+}

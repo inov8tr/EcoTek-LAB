@@ -20,20 +20,24 @@ export function RecoveryVsReagent({ data }: { data: Point[] }) {
       description="Visualize elastic recovery against reagent loading."
     >
       <div className="h-72 w-full">
-        <ResponsiveContainer>
-          <ScatterChart>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" dataKey="reagent" name="Reagent %" />
-            <YAxis type="number" dataKey="recovery" name="Recovery %" />
-            <Tooltip cursor={{ strokeDasharray: "3 3" }} />
-            <Scatter
-              name="Recovery"
-              data={data}
-              fill="var(--color-accent-sustainability)"
-              shape="circle"
-            />
-          </ScatterChart>
-        </ResponsiveContainer>
+        {data.length === 0 ? (
+          <p className="text-sm text-[#667085]">No recovery data recorded yet.</p>
+        ) : (
+          <ResponsiveContainer>
+            <ScatterChart>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E3E8EF" />
+              <XAxis type="number" dataKey="reagent" name="Reagent %" />
+              <YAxis type="number" dataKey="recovery" name="Recovery %" />
+              <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+              <Scatter
+                name="Recovery"
+                data={data}
+                fill="#24548F"
+                shape="circle"
+              />
+            </ScatterChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </DashboardCard>
   );

@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@prisma/client':
-        specifier: ^5.19.1
+        specifier: 5.22.0
         version: 5.22.0(prisma@5.22.0)
       '@radix-ui/react-slot':
         specifier: ^1.2.4
@@ -97,7 +97,7 @@ importers:
         specifier: 16.0.6
         version: 16.0.6(@typescript-eslint/parser@8.48.1(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
       prisma:
-        specifier: ^5.19.1
+        specifier: 5.22.0
         version: 5.22.0
       tailwindcss:
         specifier: ^4

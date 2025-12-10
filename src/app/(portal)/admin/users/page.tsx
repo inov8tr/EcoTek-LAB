@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { updateUserStatus, deleteUser } from "./actions";
+import { updateUserStatus, deleteUser, createUser } from "./actions";
 import RoleSelect from "./role-select";
 
 const STATUS_FILTERS: (UserStatus | "ALL")[] = ["ALL", "PENDING", "ACTIVE", "SUSPENDED"];
@@ -25,6 +25,12 @@ export default async function AdminUsersPage({
 
   const users = await prisma.user.findMany({
     where,
+    include: {
+      sessions: {
+        orderBy: { lastSeenAt: "desc" },
+        take: 1,
+      },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -43,6 +49,65 @@ export default async function AdminUsersPage({
         >
           Copy signup link
         </Link>
+      </div>
+
+      <div className="rounded-2xl border border-[#E3E8EF] bg-[#FFFFFF] p-4 shadow-sm">
+        <p className="text-sm font-semibold text-[var(--color-text-heading)] mb-3">Create user</p>
+        <form action={createUser} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="text-sm text-[var(--color-text-heading)]">
+            Name
+            <input
+              name="name"
+              required
+              className="mt-1 w-full rounded-md border border-[#E3E8EF] bg-[#FFFFFF] px-3 py-2 text-sm text-[var(--color-text-heading)] shadow-sm"
+            />
+          </label>
+          <label className="text-sm text-[var(--color-text-heading)]">
+            Email
+            <input
+              name="email"
+              type="email"
+              required
+              className="mt-1 w-full rounded-md border border-[#E3E8EF] bg-[#FFFFFF] px-3 py-2 text-sm text-[var(--color-text-heading)] shadow-sm"
+            />
+          </label>
+          <label className="text-sm text-[var(--color-text-heading)]">
+            Password
+            <input
+              name="password"
+              type="password"
+              required
+              className="mt-1 w-full rounded-md border border-[#E3E8EF] bg-[#FFFFFF] px-3 py-2 text-sm text-[var(--color-text-heading)] shadow-sm"
+            />
+          </label>
+          <div className="flex gap-2">
+            <select
+              name="role"
+              defaultValue={UserRole.VIEWER}
+              className="w-full rounded-md border border-[#E3E8EF] bg-[#FFFFFF] px-3 py-2 text-sm text-[var(--color-text-heading)] shadow-sm"
+            >
+              {Object.values(UserRole).map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+            <select
+              name="status"
+              defaultValue={UserStatus.ACTIVE}
+              className="w-full rounded-md border border-[#E3E8EF] bg-[#FFFFFF] px-3 py-2 text-sm text-[var(--color-text-heading)] shadow-sm"
+            >
+              {Object.values(UserStatus).map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+            <Button type="submit" className="whitespace-nowrap px-4">
+              Create
+            </Button>
+          </div>
+        </form>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -80,6 +145,8 @@ export default async function AdminUsersPage({
               <th className="px-4 py-3 font-semibold">Email</th>
               <th className="px-4 py-3 font-semibold">Role</th>
               <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 font-semibold">Last active</th>
+              <th className="px-4 py-3 font-semibold">2FA</th>
               <th className="px-4 py-3 font-semibold">Actions</th>
             </tr>
           </thead>
@@ -107,6 +174,21 @@ export default async function AdminUsersPage({
                   >
                     {user.status}
                   </span>
+                </td>
+                <td className="px-4 py-4 text-xs text-[var(--color-text-muted)]">
+                  {user.sessions[0]?.lastSeenAt
+                    ? new Intl.DateTimeFormat("en-CA", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      }).format(user.sessions[0].lastSeenAt)
+                    : "—"}
+                </td>
+                <td className="px-4 py-4 text-xs font-semibold">
+                  {user.twoFactorEnabled ? (
+                    <span className="text-[var(--color-status-pass-text)]">Enabled</span>
+                  ) : (
+                    <span className="text-[var(--color-text-muted)]">Off</span>
+                  )}
                 </td>
                 <td className="px-4 py-4">
                   <div className="flex flex-wrap gap-2">
@@ -144,7 +226,7 @@ export default async function AdminUsersPage({
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-[var(--color-text-muted)]">
+                <td colSpan={7} className="px-4 py-12 text-center text-[var(--color-text-muted)]">
                   No users match this filter.
                 </td>
               </tr>

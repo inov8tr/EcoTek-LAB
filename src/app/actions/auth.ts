@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { UserRole, UserStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { auth, signIn, signOut, type AuthError } from "@/auth";
+import { captureClientMetadata } from "@/lib/security-events";
 
 type AuthState = {
   error?: string;
@@ -71,6 +72,16 @@ export async function authenticate(
       recoveryCode,
       redirectTo: redirectTo as Route,
     });
+    const meta = await captureClientMetadata();
+    await prisma.securityEvent.create({
+      data: {
+        userId: existing.id,
+        eventType: "LOGIN_SUCCESS",
+        detail: "Credentials login",
+        ipAddress: meta.ip,
+        userAgent: meta.userAgent,
+      },
+    });
   } catch (error) {
     if ((error as Error).name === "AuthError") {
       return { error: mapAuthError(error as AuthError) };
@@ -116,6 +127,22 @@ export async function registerUser(
 }
 
 export async function logout() {
+  const meta = await captureClientMetadata();
+  const user = await prisma.user.findUnique({
+    where: { email: (await auth())?.user?.email ?? "" },
+    select: { id: true },
+  });
+  if (user) {
+    await prisma.securityEvent.create({
+      data: {
+        userId: user.id,
+        eventType: "LOGOUT",
+        detail: "User signed out",
+        ipAddress: meta.ip,
+        userAgent: meta.userAgent,
+      },
+    });
+  }
   await signOut({ redirectTo: "/login" });
 }
 

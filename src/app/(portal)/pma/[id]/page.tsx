@@ -15,10 +15,10 @@ export default async function PmaDetailPage({ params }: PageProps) {
   const pma = await prisma.pmaFormula.findUnique({
     where: { id },
     include: {
-      capsuleFormula: { include: { materials: true } },
+      capsuleFormula: true,
       bitumenOrigin: true,
       bitumenTest: true,
-      batches: { include: { testResults: true }, orderBy: { createdAt: "desc" } },
+      batches: { orderBy: { createdAt: "desc" } },
     },
   });
 
@@ -80,9 +80,7 @@ export default async function PmaDetailPage({ params }: PageProps) {
             >
               <div>
                 <p className="font-semibold">{b.batchCode}</p>
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  Tests: {b.testResults.length}
-                </p>
+                <p className="text-xs text-[var(--color-text-muted)]">No test results tracked in this build.</p>
               </div>
               <Link
                 href={`/pma/batches/${b.id}` as Route}

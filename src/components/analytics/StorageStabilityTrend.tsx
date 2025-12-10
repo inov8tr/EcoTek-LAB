@@ -23,21 +23,25 @@ export function StorageStabilityTrend({ data }: { data: TrendPoint[] }) {
       description="Track Δ (%) across batches or formulations."
     >
       <div className="h-72 w-full">
-        <ResponsiveContainer>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="label" />
-            <YAxis />
-            <Tooltip />
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke="var(--color-accent-sustainability)"
-              strokeWidth={2}
-              dot={{ r: 3 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        {data.length === 0 ? (
+          <p className="text-sm text-[#667085]">No stability data recorded yet.</p>
+        ) : (
+          <ResponsiveContainer>
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E3E8EF" />
+              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke="#2FA94B"
+                strokeWidth={2}
+                dot={{ r: 3, stroke: "#2FA94B" }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </DashboardCard>
   );

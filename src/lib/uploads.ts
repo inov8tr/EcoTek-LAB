@@ -30,3 +30,19 @@ export async function deleteUploadFile(storagePath: string) {
     }
   }
 }
+
+export async function uploadAvatar(userId: string, file: File) {
+  await ensureUploadDir();
+  const avatarDir = path.join(uploadDir, "avatars");
+  await fs.mkdir(avatarDir, { recursive: true });
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const ext = (file.name.split(".").pop() || "png").replace(/[^a-zA-Z0-9]/g, "") || "png";
+  const hash = crypto.randomBytes(6).toString("hex");
+  const fileName = `${userId}-avatar-${Date.now()}-${hash}.${ext}`;
+  const filePath = path.join(avatarDir, fileName);
+  await fs.writeFile(filePath, buffer);
+  const url = `/uploads/avatars/${fileName}`;
+  return { url, filePath };
+}

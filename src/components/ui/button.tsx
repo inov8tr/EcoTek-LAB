@@ -15,11 +15,11 @@ export function Button({
 }: ButtonProps) {
   const styles = {
     primary:
-      "bg-[var(--color-accent-primary)] text-white hover:bg-[var(--color-accent-primary)]/90",
+      "bg-[#24548F] text-white hover:bg-[#1D4475]",
     outline:
-      "border border-border text-[var(--color-text-heading)] hover:bg-[var(--color-bg-alt)]",
+      "border border-[#D0D5DD] bg-[#FFFFFF] text-[#2E2F31] hover:bg-[#F6F7FA]",
     ghost:
-      "text-[var(--color-text-heading)] hover:bg-[var(--color-bg-alt)]/80",
+      "text-[#2E2F31] hover:bg-[#F2F4F7]",
   };
 
   const Component = asChild ? Slot : "button";

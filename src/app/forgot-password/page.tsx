@@ -3,7 +3,7 @@
 import { requestPasswordReset } from "@/app/actions/security";
 import { useActionState } from "react";
 
-const initialState = { error: "", success: "", link: "" };
+const initialState = { error: "", success: "" };
 
 export default function ForgotPasswordPage() {
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -33,11 +33,9 @@ export default function ForgotPasswordPage() {
       {state.success && (
         <div className="space-y-1 rounded-lg bg-[var(--color-bg-alt)] p-3 text-sm">
           <p className="font-semibold text-[var(--color-text-heading)]">{state.success}</p>
-          {state.link && (
-            <p className="break-all text-[var(--color-text-muted)]">
-              Reset link: <code>{state.link}</code>
-            </p>
-          )}
+          <p className="text-[var(--color-text-muted)]">
+            If the account exists, a reset link was issued. Check your email for next steps.
+          </p>
         </div>
       )}
     </div>

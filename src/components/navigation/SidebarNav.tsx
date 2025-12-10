@@ -20,8 +20,9 @@ export function SidebarNav({ currentUser }: { currentUser: CurrentUser }) {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-[92px] z-30 hidden h-[calc(100vh-92px)] border-r border-border-subtle bg-white/80 backdrop-blur-xl md:flex",
-        "flex-col transition-all duration-300 shadow-[0_10px_40px_rgba(15,23,42,0.08)]",
+        "fixed left-0 top-[92px] z-30 hidden h-[calc(100vh-92px)] md:flex",
+        "flex-col transition-all duration-300",
+        "border border-border/40 bg-card/95 shadow-2xl backdrop-blur-md",
         collapsed ? "w-16" : "w-64"
       )}
       onMouseEnter={() => collapsed && setCollapsed(false)}
@@ -36,7 +37,7 @@ export function SidebarNav({ currentUser }: { currentUser: CurrentUser }) {
 
         <button
           onClick={() => setCollapsed((prev) => !prev)}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle bg-white/70 text-gray-600 hover:bg-gray-100"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-card/90 text-foreground hover:bg-accent/40"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           type="button"
         >
@@ -62,13 +63,13 @@ export function SidebarNav({ currentUser }: { currentUser: CurrentUser }) {
                   key={i.href}
                   href={i.href as Route}
                   className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "group flex items-center gap-3 rounded-lg border px-3 py-2 text-sm font-medium transition-all",
                     active
-                      ? "bg-[var(--color-accent-sustainability)]/20 text-[var(--color-text-heading)] shadow-sm"
-                      : "text-[var(--color-text-main)] hover:bg-gray-100"
+                      ? "border-border/60 bg-accent/60 text-foreground shadow-md"
+                      : "border-transparent text-[var(--color-text-heading)] hover:border-border/50 hover:bg-accent/50 hover:shadow-sm"
                   )}
                 >
-                  <Icon size={20} className="shrink-0" />
+                  <Icon size={20} className="shrink-0 text-primary transition-transform group-hover:scale-110" />
                   {!collapsed && <span>{i.label}</span>}
                 </Link>
               );
@@ -77,7 +78,7 @@ export function SidebarNav({ currentUser }: { currentUser: CurrentUser }) {
         ))}
       </nav>
 
-      <div className="border-t border-border-subtle px-3 py-4">
+      <div className="border-t border-border px-3 py-4">
         {collapsed ? (
           <div className="flex justify-center">
             <LogoutButton iconOnly />

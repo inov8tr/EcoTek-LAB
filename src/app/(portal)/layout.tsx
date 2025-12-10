@@ -10,15 +10,24 @@ export default async function PortalLayout({
   children: React.ReactNode;
 }) {
   const currentUser = await requireStatus(UserStatus.ACTIVE);
+
   const allowSwitching = currentUser.role === UserRole.ADMIN;
 
+  // Explicit role → mode mapping (future-proof)
+  const roleToMode: Record<UserRole, ViewMode> = {
+    ADMIN: "ADMIN",
+    RESEARCHER: "RESEARCHER",
+    VIEWER: "VIEWER",
+  };
+
+  const initialMode: ViewMode = roleToMode[currentUser.role] ?? "VIEWER";
+
   return (
-    <ViewModeProvider
-      initialMode={(currentUser.role as ViewMode) ?? "VIEWER"}
-      allowSwitching={allowSwitching}
-    >
-      <ViewModeBanner />
-      <DashboardLayout currentUser={currentUser}>{children}</DashboardLayout>
+    <ViewModeProvider initialMode={initialMode} allowSwitching={allowSwitching}>
+      <DashboardLayout currentUser={currentUser}>
+        <ViewModeBanner />
+        {children}
+      </DashboardLayout>
     </ViewModeProvider>
   );
 }

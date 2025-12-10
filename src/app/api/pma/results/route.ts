@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { guardApiUser } from "@/lib/api/auth";
 import { UserRole } from "@prisma/client";
 import { pmaResultBody } from "@/lib/api/validators";
@@ -12,12 +11,11 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const batchId = searchParams.get("pmaBatchId");
 
-  const results = await prisma.pmaTestResult.findMany({
-    where: batchId ? { pmaBatchId: batchId } : undefined,
-    include: { pmaBatch: true },
-    orderBy: { createdAt: "desc" },
-  });
-  return NextResponse.json(results);
+  console.warn(`PMA test results list requested (${batchId ?? "all"}) but PMA test models are removed.`);
+  return NextResponse.json(
+    { error: "PMA test results are not available in this build." },
+    { status: 410 },
+  );
 }
 
 export async function POST(req: Request) {
@@ -71,29 +69,10 @@ export async function POST(req: Request) {
     }
 
     // storage stability rule already bounded 0-100 in schema
-    const created = await prisma.pmaTestResult.create({
-      data: {
-        pmaBatchId: data.pmaBatchId,
-        softeningPoint: data.softeningPoint,
-        viscosity135: data.viscosity135,
-        viscosity165: data.viscosity165,
-        ductility: data.ductility,
-        elasticRecovery: data.elasticRecovery,
-        storageStabilityDifference: data.storageStabilityDifference,
-        pgHigh: data.pgHigh,
-        pgLow: data.pgLow,
-        dsrOriginalTemp: data.dsrOriginalTemp,
-        dsrOriginalGOverSin: data.dsrOriginalGOverSin,
-        dsrRtfoTemp: data.dsrRtfoTemp,
-        dsrRtfoGOverSin: data.dsrRtfoGOverSin,
-        dsrPavTemp: data.dsrPavTemp,
-        dsrPavGTimesSin: data.dsrPavGTimesSin,
-        bbrTemp: data.bbrTemp,
-        bbrStiffness: data.bbrStiffness,
-        bbrMValue: data.bbrMValue,
-      },
-    });
-    return NextResponse.json(created, { status: 201 });
+    return NextResponse.json(
+      { error: "PMA test results are not available in this build." },
+      { status: 410 },
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.flatten() }, { status: 400 });

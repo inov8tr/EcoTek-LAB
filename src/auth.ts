@@ -1,4 +1,4 @@
-import NextAuth, { type AuthError } from "next-auth";
+import NextAuth, { CredentialsSignin, type AuthError } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
@@ -35,29 +35,29 @@ export const {
         const recoveryCode = typeof rawRecovery === "string" ? rawRecovery.trim() : "";
 
         if (!email || !password) {
-          throw new Error("INVALID_CREDENTIALS");
+          throw new CredentialsSignin("INVALID_CREDENTIALS");
         }
 
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
-          throw new Error("INVALID_CREDENTIALS");
+          throw new CredentialsSignin("INVALID_CREDENTIALS");
         }
 
         if (user.status === UserStatus.PENDING) {
-          throw new Error("PENDING");
+          throw new CredentialsSignin("PENDING");
         }
 
         if (user.status === UserStatus.SUSPENDED) {
-          throw new Error("SUSPENDED");
+          throw new CredentialsSignin("SUSPENDED");
         }
 
         const passwordMatches = await bcrypt.compare(password, user.passwordHash);
         if (!passwordMatches) {
-          throw new Error("INVALID_CREDENTIALS");
+          throw new CredentialsSignin("INVALID_CREDENTIALS");
         }
 
         if (user.status !== UserStatus.ACTIVE) {
-          throw new Error("INACTIVE");
+          throw new CredentialsSignin("INACTIVE");
         }
 
         if (user.twoFactorEnabled) {
@@ -65,7 +65,7 @@ export const {
           if (totp) {
             const { authenticator } = await import("otplib");
             if (!user.twoFactorSecret) {
-              throw new Error("2FA_MISCONFIGURED");
+              throw new CredentialsSignin("2FA_MISCONFIGURED");
             }
             const ok = authenticator.verify({ token: totp, secret: user.twoFactorSecret });
             if (ok) passed2fa = true;
@@ -83,7 +83,7 @@ export const {
             }
           }
           if (!passed2fa) {
-            throw new Error("INVALID_TOTP");
+            throw new CredentialsSignin("INVALID_TOTP");
           }
         }
 
@@ -108,7 +108,7 @@ export const {
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    jwt({ token, user, trigger }) {
       if (user) {
         token.role = (user as { role?: UserRole }).role;
         token.status = (user as { status?: UserStatus }).status;

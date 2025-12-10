@@ -1,14 +1,16 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Route } from "next";
+
 import { ChartCard } from "@/components/ui/chart-card";
 import { DataTable } from "@/components/ui/data-table";
 import { MetricCard } from "@/components/ui/metric-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { LineTrendChart } from "@/components/charts/line-trend-chart";
+
 import { gatewayTimeline, spotlightTasks } from "@/lib/data";
-import { getDatabaseStatus } from "@/lib/db";
 import { getDashboardData } from "@/lib/data-service";
+import { getDatabaseStatus } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth-helpers";
 
 export default async function DashboardPage() {
@@ -17,28 +19,37 @@ export default async function DashboardPage() {
   const isAdmin = currentUser?.role === "ADMIN";
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 pt-4">
+      {/* HERO HEADER SECTION */}
       <section className="rounded-[32px] border border-border bg-white/70 p-8 shadow-lg shadow-indigo-100 backdrop-blur-xl">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          
+          {/* Left: text */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.6em] text-[var(--color-text-muted)]">
               EcoTek Control Center
             </p>
+
             <h1 className="mt-3 text-3xl font-semibold leading-tight text-[var(--color-text-heading)] md:text-4xl">
               Eco API Gateway
             </h1>
+
             <p className="mt-2 max-w-2xl text-[var(--color-text-main)]">
               Monitor live sync health, approve formulation changes, and keep every analytics
               workload aligned with sustainability targets.
             </p>
           </div>
+
+          {/* Right: status chips */}
           <div className="flex flex-wrap gap-3 text-sm font-medium text-[var(--color-text-heading)]">
             <span className="rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-emerald-700">
               Real-time Sync On
             </span>
+
             <span className="rounded-full border border-border px-4 py-2">
               6 Active Pipelines
             </span>
+
             <span
               className={`rounded-full px-4 py-2 ${
                 dbStatus.connected
@@ -52,6 +63,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
+      {/* Dashboard content (Suspense) */}
       <Suspense fallback={<DashboardSkeleton />}>
         <DashboardData isAdmin={isAdmin} />
       </Suspense>
@@ -60,19 +72,33 @@ export default async function DashboardPage() {
 }
 
 async function DashboardData({ isAdmin }: { isAdmin: boolean }) {
-  const { metrics, recoveryTrend, storabilityTrend, recentBatches, pendingUsers, complianceSummary } =
-    await getDashboardData();
+  const {
+    metrics,
+    recoveryTrend,
+    storabilityTrend,
+    recentBatches,
+    pendingUsers,
+    complianceSummary,
+  } = await getDashboardData();
 
   return (
     <>
+      {/* METRIC CARDS */}
       <section className="grid gap-6 md:grid-cols-3">
         {metrics.map((metric) => (
           <MetricCard key={metric.label} {...metric} />
         ))}
+
         {isAdmin && (
-          <ChartCard title="Pending approvals" description="Accounts awaiting admin activation">
+          <ChartCard
+            title="Pending approvals"
+            description="Accounts awaiting admin activation"
+          >
             <div className="flex items-baseline justify-between">
-              <p className="text-4xl font-semibold text-[var(--color-text-heading)]">{pendingUsers}</p>
+              <p className="text-4xl font-semibold text-[var(--color-text-heading)]">
+                {pendingUsers}
+              </p>
+
               <Link
                 href={"/admin/users" as Route}
                 className="text-sm font-semibold text-[var(--color-text-link)] underline-offset-4 hover:underline"
@@ -84,34 +110,48 @@ async function DashboardData({ isAdmin }: { isAdmin: boolean }) {
         )}
       </section>
 
+      {/* TREND CHARTS */}
       <section className="grid gap-6 lg:grid-cols-2">
+        
+        {/* Elastic Recovery */}
         <ChartCard
           title="Elastic Recovery Trend"
           description="Recovery percentage across recent batches"
         >
           <LineTrendChart
-            data={recoveryTrend.map((datum) => ({
-              batch: datum.batch,
-              recovery: datum.value,
+            data={recoveryTrend.map((d) => ({
+              batch: d.batch,
+              recovery: d.value,
             }))}
             xKey="batch"
-            lines={[{ dataKey: "recovery", color: "var(--color-accent-recovery)", name: "Recovery %" }]}
+            lines={[
+              {
+                dataKey: "recovery",
+                color: "var(--color-accent-recovery)",
+                name: "Recovery %",
+              },
+            ]}
             yDomain={[70, 100]}
           />
         </ChartCard>
 
+        {/* Storability */}
         <ChartCard
           title="Storability Trend"
           description="Separation percentage (5% limit shown)"
         >
           <LineTrendChart
-            data={storabilityTrend.map((datum) => ({
-              batch: datum.batch,
-              storability: datum.value,
+            data={storabilityTrend.map((d) => ({
+              batch: d.batch,
+              storability: d.value,
             }))}
             xKey="batch"
             lines={[
-              { dataKey: "storability", color: "var(--color-accent-storability)", name: "Storability %" },
+              {
+                dataKey: "storability",
+                color: "var(--color-accent-storability)",
+                name: "Storability %",
+              },
             ]}
             yDomain={[0, 8]}
             references={[
@@ -125,7 +165,10 @@ async function DashboardData({ isAdmin }: { isAdmin: boolean }) {
         </ChartCard>
       </section>
 
+      {/* TIMELINE + SPOTLIGHT */}
       <section className="grid gap-6 lg:grid-cols-[3fr_2fr]">
+        
+        {/* Timeline */}
         <ChartCard title="Gateway Timeline" description="Deployments and sync status for today">
           <ul className="space-y-5">
             {gatewayTimeline.map((event) => (
@@ -136,16 +179,23 @@ async function DashboardData({ isAdmin }: { isAdmin: boolean }) {
                 <div className="text-sm font-semibold text-[var(--color-text-muted)]">
                   {event.time}
                 </div>
+
                 <div className="flex-1 space-y-1">
-                  <p className="font-semibold text-[var(--color-text-heading)]">{event.title}</p>
-                  <p className="text-sm text-[var(--color-text-main)]">{event.detail}</p>
+                  <p className="font-semibold text-[var(--color-text-heading)]">
+                    {event.title}
+                  </p>
+                  <p className="text-sm text-[var(--color-text-main)]">
+                    {event.detail}
+                  </p>
                 </div>
+
                 <StatusBadge status={event.state} />
               </li>
             ))}
           </ul>
         </ChartCard>
 
+        {/* Operator Spotlight */}
         <ChartCard title="Operator Spotlight" description="Workflows needing review">
           <div className="space-y-4">
             {spotlightTasks.map((task) => (
@@ -156,33 +206,62 @@ async function DashboardData({ isAdmin }: { isAdmin: boolean }) {
                 <p className="text-xs font-semibold uppercase tracking-[0.4em] text-[var(--color-text-muted)]">
                   {task.badge}
                 </p>
+
                 <p className="mt-2 text-lg font-semibold text-[var(--color-text-heading)]">
                   {task.title}
                 </p>
-                <p className="text-sm text-[var(--color-text-main)]">{task.detail}</p>
-                <p className="mt-2 text-xs font-semibold text-amber-600">{task.eta}</p>
+
+                <p className="text-sm text-[var(--color-text-main)]">
+                  {task.detail}
+                </p>
+
+                <p className="mt-2 text-xs font-semibold text-amber-600">
+                  {task.eta}
+                </p>
               </article>
             ))}
           </div>
         </ChartCard>
       </section>
 
+      {/* COMPLIANCE SNAPSHOT */}
       {complianceSummary.length > 0 && (
-        <ChartCard title="Compliance snapshot" description="Latest test status across configured standards">
+        <ChartCard
+          title="Compliance snapshot"
+          description="Latest test status across configured standards"
+        >
           <div className="grid gap-3 md:grid-cols-3">
-            {complianceSummary.map((item: { standard: string; status: string }) => (
-              <div key={item.standard} className="rounded-2xl border border-border/60 p-3">
-                <p className="text-sm font-semibold text-[var(--color-text-heading)]">{item.standard}</p>
-                <div className="mt-2">
-                  <StatusBadge status={item.status === "pending" ? "on-track" : (item.status as "pass" | "fail")} />
+            {complianceSummary.map(
+              (item: { standard: string; status: string }) => (
+                <div
+                  key={item.standard}
+                  className="rounded-2xl border border-border/60 p-3"
+                >
+                  <p className="text-sm font-semibold text-[var(--color-text-heading)]">
+                    {item.standard}
+                  </p>
+
+                  <div className="mt-2">
+                    <StatusBadge
+                      status={
+                        item.status === "pending"
+                          ? "on-track"
+                          : (item.status as "pass" | "fail")
+                      }
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ),
+            )}
           </div>
         </ChartCard>
       )}
 
-      <ChartCard title="Recent Batches" description="Latest batch results and compliance status">
+      {/* RECENT BATCHES TABLE */}
+      <ChartCard
+        title="Recent Batches"
+        description="Latest batch results and compliance status"
+      >
         <DataTable
           columns={[
             { key: "batch", header: "Batch" },
@@ -201,6 +280,7 @@ async function DashboardData({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
+/* LOADING SKELETON */
 function DashboardSkeleton() {
   return (
     <div className="space-y-6">
@@ -212,6 +292,7 @@ function DashboardSkeleton() {
           />
         ))}
       </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         {[...Array(2)].map((_, idx) => (
           <div

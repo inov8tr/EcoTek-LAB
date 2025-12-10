@@ -9,6 +9,9 @@ import { requireRole } from "@/lib/auth-helpers";
 import { BinderTestReviewForm } from "./BinderTestReviewForm";
 import { BINDER_BASE_PATH } from "@/lib/binder/storage";
 import type { BinderTestExtractedData } from "@/lib/binder/types";
+import { evaluateBinderRules } from "@/lib/binder/rules";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { findMissingOrUncertainFields } from "@/lib/binder/parser";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -31,6 +34,19 @@ export default async function BinderTestReviewPage({ params }: PageProps) {
   const aiPath = path.join(aiDir, "ai_extraction.json");
   const aiData: BinderTestExtractedData | null =
     fs.existsSync(aiPath) ? JSON.parse(fs.readFileSync(aiPath, "utf8")) : null;
+  const parsedSummary = parsedData ?? aiData ?? null;
+  const missing =
+    parsedSummary ? findMissingOrUncertainFields(parsedSummary as any).slice(0, 8) : [];
+
+  const qa = evaluateBinderRules({
+    recoveryPct: binderTest.recoveryPct,
+    softeningPoint: binderTest.softeningPointC,
+    pgHigh: binderTest.pgHigh,
+    pgLow: binderTest.pgLow,
+    crmPct: binderTest.crmPct,
+    reagentPct: binderTest.reagentPct,
+    aerosilPct: binderTest.aerosilPct,
+  });
 
   return (
     <div className="space-y-6">
@@ -45,6 +61,28 @@ export default async function BinderTestReviewPage({ params }: PageProps) {
         </Link>
       </div>
 
+      <div className="rounded-xl border border-[#E3E8EF] bg-[#FFFFFF] p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-xs text-[#667085]">Automated QA Checks</p>
+            <p className="text-sm font-semibold text-[#1B1C1E]">Status: {qa.overall.toUpperCase()}</p>
+          </div>
+          <StatusBadge status={binderTest.status ?? qa.overall} />
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="text-sm text-[#2E2F31]">
+            <span className="font-semibold">Rating:</span> {qa.rating}
+          </div>
+          <div className="text-sm text-[#2E2F31]">
+            <span className="font-semibold">PG Grade:</span> {qa.pgGrade}
+          </div>
+          <div className="sm:col-span-2 text-sm text-[#2E2F31]">
+            <span className="font-semibold">Flags:</span>{" "}
+            {qa.flags.length ? qa.flags.join(", ") : "None"}
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-xl border bg-card">
         <div className="border-b px-4 py-3 font-semibold">
           Extracted Data (Review & Fix)
@@ -53,8 +91,13 @@ export default async function BinderTestReviewPage({ params }: PageProps) {
           </span>
         </div>
         <div className="p-4 space-y-4">
-          <div className="text-xs text-muted-foreground">
-            Parsed (deterministic): {parsedData ? "Loaded" : "Not available"} · AI: {aiData ? "Loaded" : "Not used"}
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div>Parsed (deterministic): {parsedData ? "Loaded" : "Not available"} · AI: {aiData ? "Loaded" : "Not used"}</div>
+            {missing.length > 0 && (
+              <div className="rounded-md bg-amber-50 px-3 py-2 text-[11px] text-amber-900 border border-amber-200">
+                Parser did not fill all fields. Please review: {missing.join(", ")}
+              </div>
+            )}
           </div>
           <BinderTestReviewForm binderTest={{ ...binderTest, aiExtractedData: binderTest.aiExtractedData ?? (aiData ? { data: aiData } : null) } as any} />
           <div className="mt-4 text-right">

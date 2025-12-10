@@ -30,7 +30,7 @@ export function UserMenu({ user }: { user: CurrentUser }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="Open account menu"
-        className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-white shadow-sm transition hover:shadow-md"
+        className="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-white shadow-sm transition hover:shadow-md"
       >
         <AvatarCircle src={user.avatarUrl ?? undefined} alt={user.displayName ?? user.name ?? "User"} fallback={initial} />
       </button>
@@ -97,13 +97,13 @@ function AvatarCircle({
 }) {
   if (src) {
     return (
-      <div className="h-8 w-8 overflow-hidden rounded-full border border-border">
-        <Image src={src} alt={alt} width={32} height={32} className="h-full w-full object-cover" />
+      <div className="h-12 w-12 overflow-hidden rounded-full border border-border">
+        <Image src={src} alt={alt} width={48} height={48} className="h-full w-full object-cover" />
       </div>
     );
   }
   return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-[var(--color-bg-alt)] text-sm font-semibold">
+    <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-[var(--color-bg-alt)] text-sm font-semibold">
       {fallback.toUpperCase()}
     </div>
   );

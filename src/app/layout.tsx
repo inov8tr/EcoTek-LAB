@@ -16,9 +16,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="bg-[var(--color-bg-main)] text-[var(--color-text-main)] antialiased">
-        {children}
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className="
+          min-h-screen 
+          bg-[var(--color-bg-main)] 
+          text-[var(--color-text-main)] 
+          antialiased
+        "
+      >
+        {/* App wrapper ensures overlays & fixed elements work consistently */}
+        <div id="app-root" className="relative min-h-screen">
+          {children}
+        </div>
       </body>
     </html>
   );

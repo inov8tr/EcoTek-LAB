@@ -14,7 +14,7 @@ export async function GET(req: Request) {
 
   const batches = await prisma.pmaBatch.findMany({
     where: pmaId ? { pmaFormulaId: pmaId } : undefined,
-    include: { testResults: true, pmaFormula: true },
+    include: { pmaFormula: true },
     orderBy: { createdAt: "desc" },
   });
 

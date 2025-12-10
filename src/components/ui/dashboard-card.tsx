@@ -20,7 +20,7 @@ export function DashboardCard({
   return (
     <section
       className={cn(
-        "rounded-2xl border border-border-subtle bg-white/80 p-4 shadow-sm backdrop-blur-sm sm:p-5",
+        "rounded-2xl border border-[#E3E8EF] bg-[#FFFFFF] p-4 shadow-sm sm:p-5",
         className
       )}
     >
@@ -28,12 +28,12 @@ export function DashboardCard({
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             {title && (
-              <h2 className="text-sm font-semibold text-[var(--color-text-heading)]">
+              <h2 className="text-sm font-semibold text-[#1B1C1E]">
                 {title}
               </h2>
             )}
             {description && (
-              <p className="mt-1 text-xs text-[var(--color-text-subtle)]">
+              <p className="mt-1 text-xs text-[#667085]">
                 {description}
               </p>
             )}
@@ -45,7 +45,7 @@ export function DashboardCard({
       <div>{children}</div>
 
       {footer && (
-        <div className="mt-4 border-t border-border-subtle pt-3 text-xs text-[var(--color-text-subtle)]">
+        <div className="mt-4 border-t border-[#E3E8EF] pt-3 text-xs text-[#667085]">
           {footer}
         </div>
       )}

@@ -28,15 +28,15 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border bg-[var(--color-card-light)] p-6 shadow-sm",
+        "rounded-2xl border border-[#E3E8EF] bg-[#FFFFFF] p-6 shadow-sm",
         className
       )}
     >
-      <p className="text-xs font-semibold uppercase tracking-[0.4em] text-[var(--color-text-muted)]">
+      <p className="text-xs font-semibold uppercase tracking-[0.4em] text-[#667085]">
         {label}
       </p>
       <div className="mt-4 flex items-end gap-2">
-        <p className="text-4xl font-semibold text-[var(--color-text-heading)]">
+        <p className="text-4xl font-semibold text-[#1B1C1E]">
           {formattedValue}
           {unit}
         </p>
@@ -44,7 +44,7 @@ export function MetricCard({
           <span
             className={cn(
               "text-sm font-medium",
-              trend >= 0 ? "text-emerald-600" : "text-rose-600"
+              trend >= 0 ? "text-[#2FA94B]" : "text-[#B42318]"
             )}
           >
             {trend >= 0 ? "+" : ""}

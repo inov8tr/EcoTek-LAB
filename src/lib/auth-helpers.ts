@@ -35,11 +35,33 @@ export async function requireStatus(status: UserStatus) {
     redirect("/login" as Route);
   }
   await enforceSession(user);
-  if (user.status !== status) {
-    const loginUrl = `/login?message=${user.status.toLowerCase()}`;
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      displayName: true,
+      avatarUrl: true,
+      pronouns: true,
+      bio: true,
+      locale: true,
+      timeZone: true,
+      theme: true,
+      loginAlerts: true,
+      twoFactorEnabled: true,
+      role: true,
+      status: true,
+    },
+  });
+  if (!dbUser) {
+    redirect("/login" as Route);
+  }
+  if (dbUser.status !== status) {
+    const loginUrl = `/login?message=${dbUser.status.toLowerCase()}`;
     redirect(loginUrl as never);
   }
-  return user;
+  return { ...user, ...dbUser };
 }
 
 export async function requireRole(roles: UserRole[]) {

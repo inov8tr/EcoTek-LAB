@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { UserRole, UserStatus } from "@prisma/client";
 import { getDatabaseStatus } from "@/lib/db";
 import { requireStatus, getCurrentUser } from "@/lib/auth-helpers";
@@ -13,6 +14,7 @@ import {
   revokeAllSessions,
   regenerateRecoveryCodes,
   generateVerificationLink,
+  updateAvatar,
 } from "./actions";
 
 type SettingsPageProps = {
@@ -89,8 +91,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           <form action={updateProfile} className="mt-4 space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <InputField name="displayName" label="Display name" defaultValue={fullUser?.displayName ?? ""} />
-              <InputField name="avatarUrl" label="Avatar URL" defaultValue={fullUser?.avatarUrl ?? ""} />
-              <InputField name="pronouns" label="Pronouns" defaultValue={fullUser?.pronouns ?? ""} />
               <InputField name="locale" label="Language/locale" defaultValue={fullUser?.locale ?? "en-US"} />
               <InputField name="timeZone" label="Time zone" defaultValue={fullUser?.timeZone ?? "UTC"} />
               <SelectField
@@ -116,7 +116,43 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <button className="rounded-lg bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-semibold text-white">
               Save profile
             </button>
+          </form>
+
+          <div className="mt-4 rounded-2xl border border-border bg-[var(--color-bg-alt)] p-4">
+            <div className="flex items-center gap-4">
+              {fullUser?.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={fullUser.avatarUrl}
+                  alt={fullUser.displayName ?? fullUser.name ?? "Avatar"}
+                  className="h-16 w-16 rounded-full border border-border object-cover"
+                />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-full border border-border bg-[var(--color-bg-alt)] text-lg font-semibold">
+                  {(fullUser?.displayName ?? fullUser?.name ?? "U").charAt(0)}
+                </div>
+              )}
+              <div>
+                <p className="text-sm font-semibold text-[var(--color-text-heading)]">Profile picture</p>
+                <p className="text-xs text-[var(--color-text-muted)]">Upload a square image (PNG/JPG).</p>
+              </div>
+            </div>
+            <form action={updateAvatar} className="mt-3 space-y-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <input id="avatar" type="file" name="avatar" accept="image/*" className="sr-only" required />
+                <label
+                  htmlFor="avatar"
+                  className="cursor-pointer rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-[var(--color-text-heading)] shadow-sm"
+                >
+                  Choose file
+                </label>
+              </div>
+              <button className="rounded-lg bg-[var(--color-accent-primary)] px-3 py-2 text-xs font-semibold text-white">
+                Upload avatar
+              </button>
             </form>
+          </div>
+
           <div className="mt-4 rounded-2xl border border-border bg-[var(--color-bg-alt)] p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -131,7 +167,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                 )}
               </div>
               {!fullUser?.emailVerified && (
-                <form action={generateVerificationLink}>
+                <form action={async () => {
+                  "use server";
+                  const res = await generateVerificationLink();
+                  // Return to /settings with success message; admins can copy the link from the log if needed.
+                  redirect(`/settings?success=${encodeURIComponent(res.success)}`);
+                }}>
                   <button className="rounded-lg bg-[var(--color-accent-primary)] px-3 py-2 text-xs font-semibold text-white">
                     Generate link
                   </button>

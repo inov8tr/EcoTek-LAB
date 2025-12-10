@@ -8,7 +8,6 @@ export default async function EditCapsulePage({ params }: PageProps) {
   const { id } = await params;
   const capsule = await prisma.capsuleFormula.findUnique({
     where: { id },
-    include: { materials: { orderBy: { createdAt: "asc" } } },
   });
 
   if (!capsule) {
@@ -27,10 +26,7 @@ export default async function EditCapsulePage({ params }: PageProps) {
         capsuleId={id}
         initialName={capsule.name}
         initialDescription={capsule.description}
-        initialMaterials={capsule.materials.map((m) => ({
-          materialName: m.materialName,
-          percentage: m.percentage,
-        }))}
+        initialMaterials={[]}
       />
     </div>
   );

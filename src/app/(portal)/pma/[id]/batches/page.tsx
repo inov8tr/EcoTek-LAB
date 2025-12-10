@@ -9,7 +9,7 @@ type PageProps = { params: { id: string } };
 export default async function PmaBatchesPage({ params }: PageProps) {
   const pma = await prisma.pmaFormula.findUnique({
     where: { id: params.id },
-    include: { batches: { include: { testResults: true }, orderBy: { createdAt: "desc" } } },
+    include: { batches: { orderBy: { createdAt: "desc" } } },
   });
 
   if (!pma) notFound();
@@ -40,9 +40,7 @@ export default async function PmaBatchesPage({ params }: PageProps) {
             >
               <div>
                 <p className="font-semibold">{b.batchCode}</p>
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  Tests: {b.testResults.length}
-                </p>
+                <p className="text-xs text-[var(--color-text-muted)]">No test results tracked in this build.</p>
               </div>
               <Link
                 href={`/pma/batches/${b.id}` as Route}

@@ -21,7 +21,6 @@ const materialSchema = z.object({
 const updateSchema = z.object({
   name: z.string().trim().min(1).optional(),
   description: z.string().nullable().optional(),
-  materials: z.array(materialSchema).min(2).max(10).optional(),
 });
 
 function validateTotalPercentage(materials: { percentage: number }[]) {
@@ -46,7 +45,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const formula = await prisma.capsuleFormula.findUnique({
     where: { id },
     include: {
-      materials: { orderBy: { createdAt: "asc" } },
       pmaFormulas: {
         include: {
           bitumenOrigin: true,
@@ -73,20 +71,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   try {
     const data = updateSchema.parse(await req.json());
-    if (!data.name && !data.description && !data.materials) {
-      return NextResponse.json({ error: "No changes provided" }, { status: 400 });
-    }
+  if (!data.name && !data.description) {
+    return NextResponse.json({ error: "No changes provided" }, { status: 400 });
+  }
 
-    if (data.materials) {
-      const totalError = validateTotalPercentage(data.materials);
-      if (totalError) {
-        return NextResponse.json({ error: totalError }, { status: 400 });
-      }
-    }
-
-    const existing = await prisma.capsuleFormula.findUnique({ where: { id } });
-    if (!existing) {
-      return NextResponse.json({ error: "Capsule formula not found" }, { status: 404 });
+  const existing = await prisma.capsuleFormula.findUnique({ where: { id } });
+  if (!existing) {
+    return NextResponse.json({ error: "Capsule formula not found" }, { status: 404 });
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -99,25 +90,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         },
       });
 
-      if (data.materials) {
-        await tx.capsuleFormulaMaterial.deleteMany({
-          where: { capsuleFormulaId: id },
-        });
-        await tx.capsuleFormulaMaterial.createMany({
-          data: data.materials.map((item) => ({
-            capsuleFormulaId: id,
-            materialName: item.materialName,
-            percentage: item.percentage,
-          })),
-        });
-      }
-
       return updated;
     });
 
     const formula = await prisma.capsuleFormula.findUnique({
       where: { id },
-      include: { materials: { orderBy: { createdAt: "asc" } } },
+      include: {
+        pmaFormulas: {
+          include: {
+            bitumenOrigin: true,
+            bitumenTest: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json(formula ?? result);

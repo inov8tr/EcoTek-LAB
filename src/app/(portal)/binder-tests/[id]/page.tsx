@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
 import type { BinderTestExtractedData } from "@/lib/binder/types";
+import { evaluateBinderRules } from "@/lib/binder/rules";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -24,6 +25,20 @@ export default async function BinderTestDetailPage({ params }: { params: Promise
   }
 
   const extracted: Partial<BinderTestExtractedData> = (test.aiExtractedData as any)?.data ?? {};
+
+  const ruleInput = {
+    storageStabilityDifference: (extracted as any)?.storageStabilityDifference ?? null,
+    recoveryPct: extracted.recoveryPct ?? test.recoveryPct,
+    softeningPoint: extracted.softeningPointC ?? test.softeningPointC,
+    viscosity135: (extracted as any)?.viscosity135_cP ?? null,
+    viscosity165: (extracted as any)?.viscosity165_cP ?? null,
+    pgHigh: extracted.pgHigh ?? test.pgHigh,
+    pgLow: extracted.pgLow ?? test.pgLow,
+    crmPct: test.crmPct,
+    reagentPct: test.reagentPct,
+    aerosilPct: test.aerosilPct,
+  };
+  const qa = evaluateBinderRules(ruleInput);
 
   const performance: FieldRow[] = [
     { label: "Performance Grade", value: extracted.performanceGrade ?? buildPg(test.pgHigh, test.pgLow) },
@@ -80,13 +95,22 @@ export default async function BinderTestDetailPage({ params }: { params: Promise
           <p className="text-sm text-muted-foreground">Created {formatDateTime(test.createdAt)}</p>
         </div>
         <div className="flex flex-col items-end gap-2 text-sm">
-          <Badge variant="outline">{test.status}</Badge>
+          <StatusBadge status={test.status ?? qa.overall} />
           <div className="text-xs text-muted-foreground">
             CRM: {test.crmPct ?? "-"}% · Reagent: {test.reagentPct ?? "-"}% · Aerosil: {test.aerosilPct ?? "-"}%
           </div>
         </div>
       </div>
 
+      <Section
+        title="Automated QA Checks"
+        fields={[
+          { label: "Overall", value: qa.overall },
+          { label: "Rating", value: qa.rating },
+          { label: "PG Grade", value: qa.pgGrade },
+          { label: "Flags", value: qa.flags.length ? qa.flags.join(", ") : "None" },
+        ]}
+      />
       <Section title="Performance Grade" fields={performance} />
       <Section title="Basic Physical Properties" fields={physical} />
       <Section title="DSR (High Temperature)" fields={dsr} />
