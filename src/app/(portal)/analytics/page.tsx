@@ -7,7 +7,7 @@ import { DashboardCard } from "@/components/ui/dashboard-card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import type { Route } from "next";
-import { computePgGrade } from "@/lib/analytics/pg-grade";
+import { Analytics } from "@/lib/analytics";
 
 export default async function AnalyticsPage() {
   const [stability, recovery, ecoCapSoftening, pgImprovement] = await Promise.all([
@@ -18,14 +18,14 @@ export default async function AnalyticsPage() {
   ]);
   let pythonPgResult: { pg_high?: number; pg_low?: number; ok?: boolean } | null = null;
   try {
-    pythonPgResult = await computePgGrade({
+    pythonPgResult = await Analytics.computePgGrade({
       g_original: 1.2,
       delta_original: 68,
       g_rtfo: 1.4,
       delta_rtfo: 70,
     });
   } catch (error) {
-    console.error("Python PG grade call failed", error);
+    console.error("PG grade call failed", error);
   }
 
   return (

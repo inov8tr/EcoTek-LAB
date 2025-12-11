@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
 import type { BinderTestExtractedData } from "@/lib/binder/types";
-import { computePgGrade } from "@/lib/services/python-client";
+import { Analytics } from "@/lib/analytics";
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -162,15 +162,11 @@ async function computePgFromPython({
     gstar.push(val);
   }
 
-  try {
-    const { pg_high: pgHigh } = await computePgGrade({
-      temps,
-      gstar_original: gstar,
-      gstar_rtfo: gstar.map((value) => value * 0.85),
-    });
-    return pgHigh ?? null;
-  } catch (error) {
-    console.error("Unable to compute PG via python service", error);
-    return null;
-  }
+  const { pg_high: pgHigh } = await Analytics.computePgGrade({
+    g_original: gstar[0],
+    delta_original: temps[0],
+    g_rtfo: gstar[0] * 0.85,
+    delta_rtfo: temps[0],
+  });
+  return pgHigh ?? null;
 }

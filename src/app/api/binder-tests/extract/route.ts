@@ -7,7 +7,7 @@ import { BINDER_BASE_PATH } from "@/lib/binder/storage";
 import { runHybridExtractionForBinderTest } from "@/lib/binder/hybridExtraction";
 import fs from "fs";
 import type { BinderTestExtractedData } from "@/lib/binder/types";
-import { computePgGrade } from "@/lib/services/python-client";
+import { Analytics } from "@/lib/analytics";
 
 export const runtime = "nodejs";
 
@@ -86,12 +86,13 @@ async function maybeEnrichWithPython(data: BinderTestExtractedData) {
   const rtfoValues = gValues.map((val) => val * 0.85);
 
   try {
-    const response = await computePgGrade({
-      temps,
-      gstar_original: gValues,
-      gstar_rtfo: rtfoValues,
+    const response = await Analytics.computePgGrade({
+      g_original: gValues[0],
+      delta_original: temps[0],
+      g_rtfo: rtfoValues[0],
+      delta_rtfo: temps[0],
     });
-    if (response?.pg_high && !data.pgHigh) {
+    if (response && "pg_high" in response && response.pg_high && !data.pgHigh) {
       data.pgHigh = response.pg_high;
       if (data.pgLow !== null) {
         data.performanceGrade = `PG ${data.pgHigh}-${Math.abs(data.pgLow)}`;
