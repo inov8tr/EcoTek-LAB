@@ -7,7 +7,7 @@ import { DashboardCard } from "@/components/ui/dashboard-card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import type { Route } from "next";
-import { callPython } from "@/lib/python-client";
+import { computePgGrade } from "@/lib/analytics/pg-grade";
 
 export default async function AnalyticsPage() {
   const [stability, recovery, ecoCapSoftening, pgImprovement] = await Promise.all([
@@ -16,19 +16,16 @@ export default async function AnalyticsPage() {
     getEcoCapVsSofteningPoint(),
     getPgImprovementByBitumenSource(),
   ]);
-  let pythonPgResult: { pg_high?: number; pg_low?: number; consistent?: boolean } | null = null;
-  if (process.env.PYTHON_API_URL) {
-    try {
-      pythonPgResult = await callPython("/analytics/pg-grade", {
-        capsule_pct: 12,
-        reagent_pct: 1,
-        dsr_original: { gstar: 1.2, phase_angle: 68 },
-        dsr_rtfo: { gstar: 1.4, phase_angle: 70 },
-        dsr_pav: { gstar: 3.5, phase_angle: 50 },
-      });
-    } catch (error) {
-      console.error("Python PG grade call failed", error);
-    }
+  let pythonPgResult: { pg_high?: number; pg_low?: number; ok?: boolean } | null = null;
+  try {
+    pythonPgResult = await computePgGrade({
+      g_original: 1.2,
+      delta_original: 68,
+      g_rtfo: 1.4,
+      delta_rtfo: 70,
+    });
+  } catch (error) {
+    console.error("Python PG grade call failed", error);
   }
 
   return (
@@ -70,7 +67,7 @@ export default async function AnalyticsPage() {
             <div className="font-semibold">Python engine PG grade</div>
             <div className="text-[var(--color-text-muted)]">
               PG High: {pythonPgResult.pg_high ?? "n/a"} · PG Low: {pythonPgResult.pg_low ?? "n/a"} ·{" "}
-              {pythonPgResult.consistent ? "Consistent" : "Review"}
+              {pythonPgResult.ok ? "Consistent" : "Review"}
             </div>
           </div>
         )}
