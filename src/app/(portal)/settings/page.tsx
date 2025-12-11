@@ -439,7 +439,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   {s.revoked && <span className="text-xs text-red-600">Revoked</span>}
                   {!s.revoked && (
                     <form action={revokeSession}>
-                      <input type="hidden" name="sessionToken" value={s.sessionToken} />
+                      <input type="hidden" name="sessionToken" value={s.sessionToken ?? ""} />
                       <button
                         className="rounded bg-red-100 px-3 py-1 text-xs font-semibold text-red-800 disabled:opacity-50"
                         disabled={isCurrent}

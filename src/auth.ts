@@ -13,7 +13,7 @@ export const {
   signOut,
 } = NextAuth({
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "database" },
+  session: { strategy: "jwt" },
   trustHost: true,
   pages: { signIn: "/login" },
   providers: [
@@ -87,11 +87,11 @@ export const {
           if (!passed2fa) {
             throw new Error("INVALID_TOTP");
           }
-        }
+      }
 
-        return {
-          id: user.id,
-          email: user.email,
+      return {
+        id: user.id,
+        email: user.email,
           name: user.name,
           role: user.role,
           status: user.status,
@@ -100,14 +100,30 @@ export const {
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = (user as { role?: UserRole }).role;
+        token.status = (user as { status?: UserStatus }).status;
+        token.sessionId = token.sessionId ?? generateSessionId();
+        const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+        await prisma.session
+          .upsert({
+            where: { sessionToken: token.sessionId as string },
+            create: { sessionToken: token.sessionId as string, userId: (user as any).id, expires },
+            update: { expires, lastSeenAt: new Date(), revoked: false },
+          })
+          .catch((err) => console.error("Session upsert failed", err));
+      }
+      return token;
+    },
+    async session({ session, token, user }) {
       if (session.user) {
         session.user = {
-          id: (user as any)?.id ?? session.user.id ?? "",
+          id: (user as any)?.id ?? (token.sub as string | undefined) ?? session.user.id ?? "",
           email: session.user.email ?? null,
           name: session.user.name ?? null,
-          role: ((user as any)?.role as UserRole) ?? UserRole.VIEWER,
-          status: ((user as any)?.status as UserStatus) ?? UserStatus.PENDING,
+          role: ((user as any)?.role as UserRole) ?? ((token.role as UserRole) ?? UserRole.VIEWER),
+          status: ((user as any)?.status as UserStatus) ?? ((token.status as UserStatus) ?? UserStatus.PENDING),
         } as typeof session.user & { role: UserRole; status: UserStatus };
       }
       return session;
@@ -115,5 +131,12 @@ export const {
   },
   secret: AUTH_SECRET,
 });
+
+function generateSessionId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2);
+}
 
 export type { AuthError };
