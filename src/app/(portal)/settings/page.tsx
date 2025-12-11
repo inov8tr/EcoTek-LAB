@@ -56,7 +56,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const params = await searchParams;
   const user = await requireStatus(UserStatus.ACTIVE);
   const dbStatus = await getDatabaseStatus();
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const currentSessionToken =
     cookieStore.get("__Secure-authjs.session-token")?.value ??
     cookieStore.get("authjs.session-token")?.value ??
