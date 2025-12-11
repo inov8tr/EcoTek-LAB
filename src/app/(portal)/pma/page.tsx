@@ -50,8 +50,7 @@ export default async function PmaListPage({
         >
           <Button
             asChild
-            variant="secondary"
-            className="rounded-full px-5 py-2 shadow-sm border-brand-primary text-brand-primary hover:bg-brand-primary/5"
+            className="rounded-full px-5 py-2 shadow-sm bg-[var(--color-accent-primary)] text-white hover:bg-[var(--color-accent-primary)]/90"
           >
             <Link href={"/pma/new" as Route}>Create PMA</Link>
           </Button>

@@ -1,8 +1,9 @@
 import fs from "fs";
 import path from "path";
 
-// Base path on Unraid
-export const BINDER_BASE_PATH = "/mnt/user/projects/EcoTek/Sample Site/project-files/binder-tests";
+const DEFAULT_BINDER_PATH = path.join(process.cwd(), "project-files", "binder-tests");
+// Allow override for production (e.g., Unraid) via env; fall back to writable project-files for dev.
+export const BINDER_BASE_PATH = process.env.BINDER_BASE_PATH ?? DEFAULT_BINDER_PATH;
 
 export function sanitizeTestName(name: string): string {
   return name
@@ -13,6 +14,7 @@ export function sanitizeTestName(name: string): string {
 }
 
 export function ensureBinderFolders(folderName: string) {
+  fs.mkdirSync(BINDER_BASE_PATH, { recursive: true });
   const originalDir = path.join(BINDER_BASE_PATH, folderName, "original");
   const aiDir = path.join(BINDER_BASE_PATH, folderName, "ai");
   const metadataDir = path.join(BINDER_BASE_PATH, folderName, "metadata");

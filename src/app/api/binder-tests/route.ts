@@ -5,14 +5,21 @@ import mime from "mime-types";
 import { Prisma, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { runHybridExtractionForBinderTest } from "@/lib/binder/hybridExtraction";
 import { BINDER_BASE_PATH, sanitizeTestName, ensureBinderFolders, saveBinderTestFile } from "@/lib/binder/storage";
+import {
+  computeDeltaSoftening,
+  computeGstarStability,
+  computeJnrStability,
+  computeRecoveryStability,
+} from "@/lib/binder/computeStorageStability";
+import { logApiRequest } from "@/lib/request-logger";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user || (user.role !== UserRole.ADMIN && user.role !== UserRole.RESEARCHER)) {
+    await logApiRequest({ req, userId: user?.id, action: "binder-test:create", status: 401, category: "api" });
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -35,6 +42,32 @@ export async function POST(req: NextRequest) {
     aerosilPct: parseFloatOrNull(formData.get("aerosilPct")),
     notes: formData.get("notes")?.toString() || null,
   };
+
+  const extracted = {
+    pgHigh: parseFloatOrNull(formData.get("pgHigh")),
+    pgLow: parseFloatOrNull(formData.get("pgLow")),
+    softeningTop: parseFloatOrNull(formData.get("softeningTop")),
+    softeningBottom: parseFloatOrNull(formData.get("softeningBottom")),
+    deltaSoftening: parseFloatOrNull(formData.get("deltaSoftening")),
+    viscosity135: parseFloatOrNull(formData.get("viscosity135")),
+    softeningPoint: parseFloatOrNull(formData.get("softeningPoint")),
+    ductility15: parseFloatOrNull(formData.get("ductility15")),
+    ductility25: parseFloatOrNull(formData.get("ductility25")),
+    recovery: parseFloatOrNull(formData.get("recovery")),
+    jnr: parseFloatOrNull(formData.get("jnr")),
+    solubility: parseFloatOrNull(formData.get("solubility")),
+  };
+
+  const parsedRecoveryValues = parseNumberArray(formData.get("recoveryValues"));
+  const parsedGstarValues = parseNumberArray(formData.get("gstarValues"));
+  const parsedJnrValues = parseNumberArray(formData.get("jnrValues"));
+
+  const storageStabilityRecoveryPercent = computeRecoveryStability(parsedRecoveryValues);
+  const storageStabilityGstarPercent = computeGstarStability(parsedGstarValues);
+  const storageStabilityJnrPercent = computeJnrStability(parsedJnrValues);
+  const computedDeltaSoftening =
+    extracted.deltaSoftening ??
+    computeDeltaSoftening(extracted.softeningTop ?? null, extracted.softeningBottom ?? null);
 
   const pdfFile = formData.get("pdfReport") as File | null;
   const photos = (formData.getAll("photos") as File[]).filter(Boolean);
@@ -79,7 +112,16 @@ export async function POST(req: NextRequest) {
 
     await prisma.binderTest.update({
       where: { id: binderTest.id },
-      data: { folderName, originalFiles: fileMeta },
+      data: {
+        folderName,
+        originalFiles: fileMeta,
+        pgHigh: extracted.pgHigh ?? undefined,
+        pgLow: extracted.pgLow ?? undefined,
+        softeningPointC: extracted.softeningPoint ?? undefined,
+        ductilityCm: extracted.ductility15 ?? undefined,
+        recoveryPct: extracted.recovery ?? undefined,
+        jnr_3_2: extracted.jnr ?? undefined,
+      },
     });
 
     // Catalog documents in DB
@@ -119,44 +161,37 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Run hybrid extraction
-    const folderPath = path.join(BINDER_BASE_PATH, folderName);
-    const extraction = await runHybridExtractionForBinderTest(folderPath);
-
-    // Save parsed deterministic JSON
-    const metadataDir = path.join(folderPath, "metadata");
-    fs.mkdirSync(metadataDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(metadataDir, "parsed_deterministic.json"),
-      JSON.stringify(extraction.data, null, 2)
-    );
-    if (extraction.usedAi) {
-      const aiDir = path.join(folderPath, "ai");
-      fs.mkdirSync(aiDir, { recursive: true });
-      fs.writeFileSync(path.join(aiDir, "ai_extraction.json"), JSON.stringify(extraction.data, null, 2));
+    // Optional: store extracted values in TestResult if batchId is provided and numeric
+    const batchIdResolved = await resolveBatchId(payload.batchId);
+    if (batchIdResolved !== null) {
+      await prisma.testResult.create({
+        data: {
+          batchId: batchIdResolved,
+          pgHigh: extracted.pgHigh ?? undefined,
+          pgLow: extracted.pgLow ?? undefined,
+          storabilityPct: computedDeltaSoftening ?? undefined,
+          solubilityPct: extracted.solubility ?? undefined,
+          jnr: extracted.jnr ?? undefined,
+          elasticRecoveryPct: extracted.recovery ?? undefined,
+          softeningPointC: extracted.softeningPoint ?? undefined,
+          ductilityCm: extracted.ductility15 ?? undefined,
+          viscosityPaS: extracted.viscosity135 ? extracted.viscosity135 / 1000 : undefined,
+          storageStabilityRecoveryPercent: storageStabilityRecoveryPercent ?? undefined,
+          storageStabilityGstarPercent: storageStabilityGstarPercent ?? undefined,
+          storageStabilityJnrPercent: storageStabilityJnrPercent ?? undefined,
+          deltaSoftening: computedDeltaSoftening ?? undefined,
+          recovery: extracted.recovery ?? undefined,
+          solubility: extracted.solubility ?? undefined,
+          remarks: "Auto-extracted via PDF upload",
+        },
+      });
     }
 
-    await prisma.binderTest.update({
-      where: { id: binderTest.id },
-      data: {
-        pgHigh: extraction.data.pgHigh,
-        pgLow: extraction.data.pgLow,
-        softeningPointC: extraction.data.softeningPointC,
-        viscosity155_cP: extraction.data.viscosity155_cP,
-        ductilityCm: extraction.data.ductilityCm,
-        recoveryPct: extraction.data.recoveryPct,
-        jnr_3_2: extraction.data.jnr_3_2,
-        dsrData: extraction.data.dsrData as Prisma.InputJsonValue,
-        aiExtractedData: extraction.usedAi
-          ? ({ data: extraction.data, sources: extraction.sources } as unknown as Prisma.InputJsonValue)
-          : Prisma.DbNull,
-        status: "PENDING_REVIEW",
-      },
-    });
-
+    await logApiRequest({ req, userId: user.id, action: "binder-test:create", status: 200, category: "api" });
     return NextResponse.json({ id: binderTest.id, folderName });
   } catch (err) {
     console.error(err);
+    await logApiRequest({ req, userId: user.id, action: "binder-test:create", status: 500, category: "api" });
     return new NextResponse("Failed to create binder test", { status: 500 });
   }
 }
@@ -165,4 +200,37 @@ function parseFloatOrNull(val: FormDataEntryValue | null): number | null {
   if (!val) return null;
   const num = Number(val);
   return Number.isFinite(num) ? num : null;
+}
+
+function parseNumberArray(entry: FormDataEntryValue | null): number[] {
+  if (!entry) return [];
+  if (entry instanceof File) return [];
+  try {
+    const parsed = JSON.parse(entry.toString());
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((v) => Number(v))
+        .filter((v) => Number.isFinite(v));
+    }
+  } catch {
+    // ignore parse error
+  }
+  return [];
+}
+
+async function resolveBatchId(batchIdRaw: string | number | null): Promise<number | null> {
+  if (batchIdRaw === null || batchIdRaw === undefined) return null;
+  const numeric = typeof batchIdRaw === "string" ? Number(batchIdRaw) : batchIdRaw;
+  if (Number.isInteger(numeric)) return Number(numeric);
+
+  if (typeof batchIdRaw === "string" && batchIdRaw.trim()) {
+    const batch = await prisma.batch.findFirst({
+      where: {
+        OR: [{ batchCode: batchIdRaw.trim() }, { slug: batchIdRaw.trim() }],
+      },
+      select: { id: true },
+    });
+    if (batch) return batch.id;
+  }
+  return null;
 }

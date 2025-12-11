@@ -4,10 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { EllipsisVertical } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export function ActionsMenu({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
+  const [archiving, setArchiving] = useState(false);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -32,11 +35,34 @@ export function ActionsMenu({ id }: { id: string }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-44 rounded-md border bg-white shadow-lg ring-1 ring-black/5">
+        <div className="absolute right-0 mt-2 w-44 rounded-md border bg-white shadow-lg ring-1 ring-black/5 z-30">
           <div className="py-1 text-sm text-gray-800">
             <MenuItem href={`/binder-tests/${id}/review` as Route} label="Review" onSelect={() => setOpen(false)} />
             <MenuItem href={`/binder-tests/${id}` as Route} label="View Data" onSelect={() => setOpen(false)} />
             <MenuItem href={`/binder-tests/${id}/documents` as Route} label="Documents" onSelect={() => setOpen(false)} />
+            <button
+              type="button"
+              className="block w-full px-3 py-2 text-left text-red-600 hover:bg-gray-100 disabled:opacity-60"
+              onClick={async () => {
+                setArchiving(true);
+                setOpen(false);
+                try {
+                  const res = await fetch(`/api/binder-tests/${id}/archive`, { method: "POST" });
+                  if (!res.ok) {
+                    console.error("Archive failed", await res.text());
+                  } else {
+                    router.refresh();
+                  }
+                } catch (err) {
+                  console.error("Archive failed", err);
+                } finally {
+                  setArchiving(false);
+                }
+              }}
+              disabled={archiving}
+            >
+              {archiving ? "Archiving..." : "Archive"}
+            </button>
           </div>
         </div>
       )}

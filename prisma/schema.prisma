@@ -102,11 +102,34 @@ model TestResult {
   pgHigh             Int?
   pgLow              Int?
   temperatureC       Float?
+  softeningTop       Float?
+  softeningBottom    Float?
+  deltaSoftening     Float?
+  viscosity135       Float?
+  softeningPoint     Float?
+  ductility15        Float?
+  ductility25        Float?
+  recovery           Float?
+  solubility         Float?
+  storageStabilityRecoveryPercent Float?
+  storageStabilityGstarPercent    Float?
+  storageStabilityJnrPercent      Float?
+  labName            String?
+  testedAt           DateTime?
+  notes              String?
   remarks            String?
   overallOutcome     TestOutcome @default(PARTIAL)
   failedReasons      String?
+  attachments        TestAttachment[]
+  analysisSetTests   AnalysisSetTest[] @relation("AnalysisSetResult")
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
+
+  @@index([testedAt])
+  @@index([pgHigh, pgLow])
+  @@index([storageStabilityRecoveryPercent])
+  @@index([storageStabilityGstarPercent])
+  @@index([storageStabilityJnrPercent])
 }
 
 // AI-assisted binder test ingestion
@@ -257,6 +280,8 @@ model User {
   passwordResetTokens       PasswordResetToken[]
   emailVerificationTokens   EmailVerificationToken[]
   supportRequests           SupportRequest[]
+  analysisSets              AnalysisSet[]           @relation("UserAnalysisSets")
+  analysisSessions          AnalysisSession[]       @relation("UserAnalysisSessions")
 }
 
 model Session {
@@ -562,4 +587,57 @@ model PmaTestResult {
   createdAt                  DateTime @default(now())
   updatedAt                  DateTime @updatedAt
   pmaBatch                   PmaBatch @relation(fields: [pmaBatchId], references: [id], onDelete: Cascade)
+}
+
+model TestAttachment {
+  id           String      @id @default(cuid())
+  testResultId Int
+  testResult   TestResult  @relation(fields: [testResultId], references: [id])
+  url          String
+  type         String?
+  description  String?
+  createdAt    DateTime    @default(now())
+}
+
+model AnalysisSet {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  ownerId     String?
+  owner       User?             @relation("UserAnalysisSets", fields: [ownerId], references: [id])
+  tests       AnalysisSetTest[]
+  sessions    AnalysisSession[] @relation("AnalysisSetSessions")
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model AnalysisSetTest {
+  id            String       @id @default(cuid())
+  analysisSetId String
+  analysisSet   AnalysisSet  @relation(fields: [analysisSetId], references: [id])
+  testResultId  Int
+  testResult    TestResult   @relation("AnalysisSetResult", fields: [testResultId], references: [id])
+
+  @@index([analysisSetId])
+  @@index([testResultId])
+}
+
+model AnalysisSession {
+  id            String        @id @default(cuid())
+  name          String
+  description   String?
+  ownerId       String?
+  owner         User?         @relation("UserAnalysisSessions", fields: [ownerId], references: [id])
+  analysisSetId String?
+  analysisSet   AnalysisSet?  @relation("AnalysisSetSessions", fields: [analysisSetId], references: [id])
+  metricType    String
+  variableKey   String
+  chartType     String
+  config        Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([ownerId])
+  @@index([analysisSetId])
+  @@index([metricType])
 }

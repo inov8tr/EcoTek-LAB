@@ -1,104 +1,92 @@
-import path from "path";
-import { NextRequest, NextResponse } from "next/server";
-import { Prisma, UserRole } from "@prisma/client";
-import { getCurrentUser } from "@/lib/auth-helpers";
-import { prisma } from "@/lib/prisma";
-import { BINDER_BASE_PATH } from "@/lib/binder/storage";
-import { runHybridExtractionForBinderTest } from "@/lib/binder/hybridExtraction";
-import fs from "fs";
-import type { BinderTestExtractedData } from "@/lib/binder/types";
-import { Analytics } from "@/lib/analytics";
+import { NextResponse } from "next/server";
 
-export const runtime = "nodejs";
+export async function POST(req: Request) {
+  try {
+    const formData = await req.formData();
+    const file = formData.get("file") as File;
 
-export async function POST(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user || (user.role !== UserRole.ADMIN && user.role !== UserRole.RESEARCHER)) {
-    return new NextResponse("Unauthorized", { status: 401 });
+    if (!file) {
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    }
+
+    // Convert File → Buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Parse PDF text
+    const pdfModule = await import("pdf-parse");
+    const pdf = (pdfModule as any).default ?? pdfModule;
+    const parsed = await pdf(buffer);
+    const text = parsed.text;
+
+    // Extract binder test values
+    const extracted = extractBinderValues(text);
+
+    return NextResponse.json({ ok: true, data: extracted });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err?.message || "Unknown error" },
+      { status: 500 }
+    );
   }
-
-  const searchParams = new URL(req.url).searchParams;
-  const id = searchParams.get("id");
-  if (!id) return new NextResponse("Missing id", { status: 400 });
-
-  const binderTest = await prisma.binderTest.findUnique({ where: { id } });
-  if (!binderTest) return new NextResponse("Not found", { status: 404 });
-
-  const folderPath = path.join(BINDER_BASE_PATH, binderTest.folderName);
-  const extraction = await runHybridExtractionForBinderTest(folderPath);
-
-  // Save parsed deterministic JSON
-  const metadataDir = path.join(folderPath, "metadata");
-  fs.mkdirSync(metadataDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(metadataDir, "parsed_deterministic.json"),
-    JSON.stringify(extraction.data, null, 2)
-  );
-  if (extraction.usedAi) {
-    const aiDir = path.join(folderPath, "ai");
-    fs.mkdirSync(aiDir, { recursive: true });
-    fs.writeFileSync(path.join(aiDir, "ai_extraction.json"), JSON.stringify(extraction.data, null, 2));
-  }
-
-  await maybeEnrichWithPython(extraction.data);
-
-  await prisma.binderTest.update({
-    where: { id: binderTest.id },
-    data: {
-      pgHigh: extraction.data.pgHigh,
-      pgLow: extraction.data.pgLow,
-      softeningPointC: extraction.data.softeningPointC,
-      viscosity155_cP: extraction.data.viscosity155_cP,
-      ductilityCm: extraction.data.ductilityCm,
-      recoveryPct: extraction.data.recoveryPct,
-      jnr_3_2: extraction.data.jnr_3_2,
-      dsrData: extraction.data.dsrData as Prisma.InputJsonValue,
-      aiExtractedData: extraction.usedAi
-        ? ({ data: extraction.data, sources: extraction.sources } as unknown as Prisma.InputJsonValue)
-        : Prisma.DbNull,
-      status: "PENDING_REVIEW",
-    },
-  });
-
-  return NextResponse.json({ success: true, usedAi: extraction.usedAi });
 }
 
-async function maybeEnrichWithPython(data: BinderTestExtractedData) {
-  if (data.pgHigh && data.pgLow) return;
-  if (!data.dsrData || Object.keys(data.dsrData).length === 0) return;
+// -------- Extraction Logic --------
 
-  const temps = Object.keys(data.dsrData)
-    .map((key) => Number(key))
-    .filter((val) => Number.isFinite(val))
-    .sort((a, b) => a - b);
-  if (!temps.length) return;
+function matchNumber(text: string, regex: RegExp): number | null {
+  const match = text.match(regex);
+  if (!match) return null;
+  const num = parseFloat(match[match.length - 1]);
+  return Number.isFinite(num) ? num : null;
+}
 
-  const gValues: number[] = [];
-  for (const temp of temps) {
-    const key = String(temp);
-    const value = data.dsrData?.[key];
-    if (typeof value !== "number" || Number.isNaN(value)) {
-      return;
-    }
-    gValues.push(value);
-  }
+function extractBinderValues(text: string) {
+  const clean = text.replace(/\s+/g, " ").trim();
 
-  const rtfoValues = gValues.map((val) => val * 0.85);
+  // PG
+  const pgHigh = matchNumber(clean, /PG\s*([0-9]{2})\s*-/i);
+  const pgLow = matchNumber(clean, /PG\s*[0-9]{2}\s*-\s*(-?[0-9]{2})/i);
 
-  try {
-    const response = await Analytics.computePgGrade({
-      g_original: gValues[0],
-      delta_original: temps[0],
-      g_rtfo: rtfoValues[0],
-      delta_rtfo: temps[0],
-    });
-    if (response && "pg_high" in response && response.pg_high && !data.pgHigh) {
-      data.pgHigh = response.pg_high;
-      if (data.pgLow !== null) {
-        data.performanceGrade = `PG ${data.pgHigh}-${Math.abs(data.pgLow)}`;
-      }
-    }
-  } catch (error) {
-    console.error("Python service enrichment failed", error);
-  }
+  // Storage stability (Softening Top/Bottom)
+  const softeningTop = matchNumber(clean, /(Top|Upper).*?([0-9]{2,3}\.?[0-9]*)\s*C/i);
+  const softeningBottom = matchNumber(clean, /(Bottom|Lower).*?([0-9]{2,3}\.?[0-9]*)\s*C/i);
+
+  const deltaSoftening =
+    softeningTop !== null && softeningBottom !== null
+      ? Number((softeningTop - softeningBottom).toFixed(2))
+      : null;
+
+  // Viscosity
+  const viscosity135 = matchNumber(clean, /(Viscosity|135).*?([0-9]{2,4})\s*c?p?/i);
+
+  // Softening point
+  const softeningPoint = matchNumber(clean, /Softening Point.*?([0-9]{2,3}\.?[0-9]*)/i);
+
+  // Ductility
+  const ductility15 = matchNumber(clean, /Ductility.*?15.*?([0-9]{2,3})\s*cm/i);
+  const ductility25 = matchNumber(clean, /Ductility.*?25.*?([0-9]{2,3})\s*cm/i);
+
+  // Elastic Recovery
+  const recovery = matchNumber(clean, /(Recovery|Elastic).*?([0-9]{2,3})\s*%/i);
+
+  // Jnr
+  const jnr = matchNumber(clean, /Jnr.*?([0-9]\.?[0-9]*)/i);
+
+  // Solubility
+  const solubility = matchNumber(clean, /Solubility.*?([0-9]{2,3})\s*%/i);
+
+  return {
+    pgHigh,
+    pgLow,
+    softeningTop,
+    softeningBottom,
+    deltaSoftening,
+    viscosity135,
+    softeningPoint,
+    ductility15,
+    ductility25,
+    recovery,
+    jnr,
+    solubility,
+  };
 }

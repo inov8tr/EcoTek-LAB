@@ -5,7 +5,10 @@ export async function extractTextFromPdf(localPath: string): Promise<string> {
   const data = new Uint8Array(fs.readFileSync(localPath));
   // Use pdfjs-dist legacy build for Node
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const doc = await pdfjs.getDocument({ data, useWorkerFetch: false }).promise;
+  // Ensure worker is disabled for server/edge by pointing to self so no external worker is fetched
+  // See https://github.com/mozilla/pdf.js/issues/10139#issuecomment-475959153
+  pdfjs.GlobalWorkerOptions.workerSrc = "data:application/javascript;base64,";
+  const doc = await pdfjs.getDocument({ data, useWorkerFetch: false, useSystemFonts: true }).promise;
   let out = "";
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);

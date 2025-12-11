@@ -40,7 +40,7 @@ export default async function BinderTestsPage({ searchParams }: BinderTestsPageP
             },
           }
         : {},
-      statusFilter ? { status: statusFilter } : {},
+      statusFilter ? { status: statusFilter } : { status: { not: BinderTestStatus.ARCHIVED } },
     ],
   };
 
@@ -111,6 +111,11 @@ export default async function BinderTestsPage({ searchParams }: BinderTestsPageP
               <Button variant="ghost" size="sm">
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
+              </Button>
+            </Link>
+            <Link href={"/binder-tests/archived" as Route}>
+              <Button variant="secondary" size="sm" className="rounded-full border-brand-primary text-brand-primary hover:bg-brand-primary/5">
+                Archived
               </Button>
             </Link>
           </div>

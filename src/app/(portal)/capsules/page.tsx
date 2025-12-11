@@ -33,8 +33,7 @@ export default async function CapsulesPage() {
         >
           <Button
             asChild
-            variant="secondary"
-            className="rounded-full px-5 py-2 shadow-sm border-brand-primary text-brand-primary hover:bg-brand-primary/5"
+            className="rounded-full px-5 py-2 shadow-sm bg-[var(--color-accent-primary)] text-white hover:bg-[var(--color-accent-primary)]/90"
           >
             <Link href={"/capsules/new" as Route}>Create Capsule</Link>
           </Button>

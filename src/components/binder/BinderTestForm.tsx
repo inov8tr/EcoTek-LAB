@@ -22,15 +22,51 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
   const [showUploader, setShowUploader] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [extracted, setExtracted] = useState<Record<string, number | null>>({
+    pgHigh: null,
+    pgLow: null,
+    softeningTop: null,
+    softeningBottom: null,
+    deltaSoftening: null,
+    viscosity135: null,
+    softeningPoint: null,
+    ductility15: null,
+    ductility25: null,
+    recovery: null,
+    jnr: null,
+    solubility: null,
+  });
 
   function handleFiles(files: FileList | null) {
     if (!files) return;
     setAllFiles((prev) => [...prev, ...Array.from(files)]);
   }
 
+  async function extractPdfData(file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch("/api/binder-tests/extract", {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      console.error("Extraction failed");
+      return;
+    }
+    const json = await res.json();
+    if (json?.data) {
+      setExtracted((prev) => ({ ...prev, ...json.data }));
+    }
+  }
+
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true);
     try {
+      Object.entries(extracted).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          formData.append(key, value.toString());
+        }
+      });
       allFiles.forEach((file) => {
         const type = file.type.toLowerCase();
         if (type.includes("pdf")) {
@@ -121,6 +157,35 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
         <p className="text-xs text-muted-foreground">
           Add report PDF, photos, and videos; we’ll categorize them automatically.
         </p>
+        <div className="mt-2 space-y-2 rounded-lg border border-border-subtle bg-white/80 p-3">
+          <Label className="text-xs font-semibold text-[var(--color-text-heading)]">Extract binder values from PDF</Label>
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              await extractPdfData(file);
+            }}
+            className="text-sm"
+          />
+          <p className="text-xs text-[var(--color-text-muted)]">
+            We’ll auto-fill PG, softening, viscosity, ductility, recovery, Jnr, and solubility when detected.
+          </p>
+          <div className="text-xs text-[var(--color-text-muted)]">
+            {Object.entries(extracted).some(([, v]) => v !== null) ? (
+              <ul className="list-disc pl-4">
+                {Object.entries(extracted).map(([k, v]) => (
+                  <li key={k} className="capitalize text-[var(--color-text-heading)]">
+                    {k}: {v ?? "—"}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <span>No extracted values yet.</span>
+            )}
+          </div>
+        </div>
       </div>
       {showUploader && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
@@ -181,7 +246,12 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
               <Button variant="secondary" onClick={() => { setAllFiles([]); }}>
                 Clear
               </Button>
-              <Button onClick={() => setShowUploader(false)}>Done</Button>
+              <Button
+                onClick={() => setShowUploader(false)}
+                className="bg-[var(--color-accent-primary)] text-white hover:bg-[var(--color-accent-primary)]/90"
+              >
+                Done
+              </Button>
             </div>
           </div>
         </div>
@@ -191,10 +261,19 @@ export function BinderTestForm({ pmaOptions = [] }: BinderTestFormProps) {
         <Button type="button" variant="secondary" onClick={() => router.back()} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="bg-[var(--color-accent-primary)] text-white hover:bg-[var(--color-accent-primary)]/90 disabled:opacity-60"
+        >
           {isSubmitting ? "Saving..." : "Create Binder Test"}
         </Button>
       </div>
+      {Object.entries(extracted).map(([key, value]) =>
+        value === null || value === undefined ? null : (
+          <input key={key} type="hidden" name={key} value={value} readOnly />
+        )
+      )}
     </form>
   );
 }

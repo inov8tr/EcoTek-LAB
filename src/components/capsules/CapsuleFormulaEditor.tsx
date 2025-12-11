@@ -207,7 +207,7 @@ export function CapsuleFormulaEditor({
         <Button
           type="submit"
           disabled={saving || percentError}
-          className="rounded-full px-6 py-2"
+          className="rounded-full px-6 py-2 bg-[var(--color-accent-primary)] text-white hover:bg-[var(--color-accent-primary)]/90 disabled:opacity-60"
         >
           {saving ? "Saving..." : submitLabel}
         </Button>

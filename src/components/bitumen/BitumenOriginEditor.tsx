@@ -97,7 +97,11 @@ export function BitumenOriginEditor({
       </DashboardCard>
 
       <div className="flex flex-wrap gap-3">
-        <Button type="submit" disabled={saving} className="rounded-full px-6 py-2">
+        <Button
+          type="submit"
+          disabled={saving}
+          className="rounded-full px-6 py-2 bg-[var(--color-accent-primary)] text-white hover:bg-[var(--color-accent-primary)]/90 disabled:opacity-60"
+        >
           {saving ? "Saving..." : submitLabel}
         </Button>
       </div>

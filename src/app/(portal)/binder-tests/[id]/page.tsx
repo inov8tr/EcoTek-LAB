@@ -3,6 +3,16 @@ import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
 import type { BinderTestExtractedData } from "@/lib/binder/types";
 import { Analytics } from "@/lib/analytics";
+import {
+  binderSpecConstants,
+  getElasticRecoveryLimit,
+  getJnrLimit,
+  isDuctilityPass,
+  isElasticRecoveryPass,
+  isJnrPass,
+  isSofteningPointPass,
+  isViscosityPass,
+} from "@/lib/analytics/binder-spec";
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -26,6 +36,14 @@ export default async function BinderTestDetailPage({ params }: { params: Promise
 
   const extracted: Partial<BinderTestExtractedData> = (test.aiExtractedData as any)?.data ?? {};
   const dsrData = (test.dsrData as Record<string, number> | null) ?? null;
+  const batchIdInt = Number(test.batchId);
+  const linkedTestResult =
+    Number.isFinite(batchIdInt) && Number.isInteger(batchIdInt)
+      ? await prisma.testResult.findFirst({
+          where: { batchId: batchIdInt },
+          orderBy: { createdAt: "desc" },
+        })
+      : null;
 
   const computedPgHigh = await computePgFromPython({
     currentPgHigh: extracted.pgHigh ?? test.pgHigh,
@@ -81,6 +99,16 @@ export default async function BinderTestDetailPage({ params }: { params: Promise
     { label: "Batch ID", value: test.batchId },
   ];
 
+  const specRows = buildSpecRows({
+    pgHigh: extracted.pgHigh ?? test.pgHigh ?? computedPgHigh ?? null,
+    pgLow: extracted.pgLow ?? test.pgLow ?? null,
+    jnr: extracted.mscr_jnr_3_2_kPa_inv ?? extracted.jnr_3_2 ?? test.jnr_3_2 ?? null,
+    recovery: extracted.mscr_percentRecoveryOverall_pct ?? extracted.recoveryPct ?? test.recoveryPct ?? null,
+    softening: extracted.softeningPointC ?? test.softeningPointC ?? null,
+    ductility: extracted.ductilityCm ?? test.ductilityCm ?? null,
+    viscosity: extracted.viscosity155_cP ?? test.viscosity155_cP ?? null,
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -97,12 +125,81 @@ export default async function BinderTestDetailPage({ params }: { params: Promise
         </div>
       </div>
 
+      {specRows.length > 0 && (
+        <section className="rounded-xl border bg-card p-4">
+          <div className="mb-3">
+            <div className="text-sm font-semibold text-[var(--color-text-heading)]">Specification checks</div>
+            <p className="text-xs text-[var(--color-text-muted)]">Calculated vs. current spec thresholds.</p>
+          </div>
+          <div className="space-y-2">
+            {specRows.map((row) => (
+              <div
+                key={row.label}
+                className="flex items-center justify-between rounded-lg border border-border-subtle bg-white px-3 py-2 text-sm"
+              >
+                <div className="space-y-0.5">
+                  <div className="font-semibold text-[var(--color-text-heading)]">{row.label}</div>
+                  <div className="text-xs text-[var(--color-text-muted)]">{row.requirement}</div>
+                </div>
+                <div className="text-right text-sm font-semibold text-[var(--color-text-heading)]">
+                  {row.value ?? "—"}{" "}
+                  {row.pass === null ? (
+                    <span className="text-[var(--color-text-muted)] text-xs">no data</span>
+                  ) : row.pass ? (
+                    <span className="text-emerald-600 text-xs font-semibold">✅ Pass</span>
+                  ) : (
+                    <span className="text-red-600 text-xs font-semibold">⚠️ Check</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <Section title="Performance Grade" fields={performance} />
       <Section title="Basic Physical Properties" fields={physical} />
       <Section title="DSR (High Temperature)" fields={dsr} />
       <Section title="BBR (Low Temperature)" fields={bbr} />
       <Section title="MSCR" fields={mscr} />
       <Section title="Metadata" fields={meta} />
+
+      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="rounded-lg border bg-white p-4 shadow-sm">
+          <h3 className="mb-2 text-sm font-semibold">Storage Stability</h3>
+          <ul className="text-sm">
+            <li>
+              Recovery Variation:{" "}
+              {(linkedTestResult as any)?.storageStabilityRecoveryPercent ?? "N/A"}%
+            </li>
+            <li>G* Variation: {(linkedTestResult as any)?.storageStabilityGstarPercent ?? "N/A"}%</li>
+            <li>Jnr Variation: {(linkedTestResult as any)?.storageStabilityJnrPercent ?? "N/A"}%</li>
+            <li>Δ Softening: {(linkedTestResult as any)?.deltaSoftening ?? "N/A"}°C</li>
+          </ul>
+        </div>
+
+        <div className="rounded-lg border bg-white p-4 shadow-sm">
+          <h3 className="mb-2 text-sm font-semibold">Binder Metrics</h3>
+          <ul className="text-sm">
+            <li>
+              Softening Point:{" "}
+              {(linkedTestResult as any)?.softeningPoint ?? test.softeningPointC ?? "N/A"}°C
+            </li>
+            <li>Viscosity 135°C: {(linkedTestResult as any)?.viscosity135 ?? "N/A"}</li>
+            <li>
+              Ductility 15°C: {(linkedTestResult as any)?.ductility15 ?? test.ductilityCm ?? "N/A"} cm
+            </li>
+            <li>Ductility 25°C: {(linkedTestResult as any)?.ductility25 ?? "N/A"} cm</li>
+            <li>
+              Elastic Recovery: {(linkedTestResult as any)?.recovery ?? test.recoveryPct ?? "N/A"}%
+            </li>
+            <li>
+              PG: {(linkedTestResult as any)?.pgHigh ?? test.pgHigh ?? "?"} -{" "}
+              {(linkedTestResult as any)?.pgLow ?? test.pgLow ?? "?"}
+            </li>
+          </ul>
+        </div>
+      </div>
 
       {test.notes && (
         <div className="rounded-xl border bg-card p-4">
@@ -133,6 +230,69 @@ function Section({ title, fields }: { title: string; fields: FieldRow[] }) {
 function buildPg(pgHigh?: number | null, pgLow?: number | null) {
   if (pgHigh === null || pgHigh === undefined || pgLow === null || pgLow === undefined) return null;
   return `PG ${pgHigh}-${Math.abs(pgLow)}`;
+}
+
+function buildSpecRows(inputs: {
+  pgHigh: number | null;
+  pgLow: number | null;
+  jnr: number | null;
+  recovery: number | null;
+  softening: number | null;
+  ductility: number | null;
+  viscosity: number | null;
+}) {
+  const rows: { label: string; requirement: string; value: number | null; pass: boolean | null }[] = [];
+
+  if (inputs.jnr !== null) {
+    const limit = getJnrLimit(inputs.pgHigh ?? undefined, inputs.pgLow ?? undefined);
+    rows.push({
+      label: "Jnr (64°C, 3.2 kPa)",
+      requirement: `≤ ${limit}`,
+      value: Number.isFinite(inputs.jnr) ? inputs.jnr : null,
+      pass: Number.isFinite(inputs.jnr) ? isJnrPass(inputs.jnr, inputs.pgHigh ?? undefined, inputs.pgLow ?? undefined) : null,
+    });
+  }
+
+  if (inputs.recovery !== null) {
+    const limit = getElasticRecoveryLimit(inputs.pgHigh ?? undefined, inputs.pgLow ?? undefined);
+    rows.push({
+      label: "Elastic Recovery (%)",
+      requirement: `≥ ${limit}`,
+      value: Number.isFinite(inputs.recovery) ? inputs.recovery : null,
+      pass: Number.isFinite(inputs.recovery)
+        ? isElasticRecoveryPass(inputs.recovery, inputs.pgHigh ?? undefined, inputs.pgLow ?? undefined)
+        : null,
+    });
+  }
+
+  if (inputs.softening !== null) {
+    rows.push({
+      label: "Softening Point (°C)",
+      requirement: `≥ ${binderSpecConstants.MIN_SOFTENING_POINT}`,
+      value: Number.isFinite(inputs.softening) ? inputs.softening : null,
+      pass: Number.isFinite(inputs.softening) ? isSofteningPointPass(inputs.softening) : null,
+    });
+  }
+
+  if (inputs.ductility !== null) {
+    rows.push({
+      label: "Ductility @15°C (cm)",
+      requirement: `≥ ${binderSpecConstants.MIN_DUCTILITY_15C}`,
+      value: Number.isFinite(inputs.ductility) ? inputs.ductility : null,
+      pass: Number.isFinite(inputs.ductility) ? isDuctilityPass(inputs.ductility) : null,
+    });
+  }
+
+  if (inputs.viscosity !== null) {
+    rows.push({
+      label: "Viscosity (cP)",
+      requirement: `≤ ${binderSpecConstants.MAX_VISCOSITY_135_CP} @135°C (pending confirm)`,
+      value: Number.isFinite(inputs.viscosity) ? inputs.viscosity : null,
+      pass: Number.isFinite(inputs.viscosity) ? isViscosityPass(inputs.viscosity) : null,
+    });
+  }
+
+  return rows;
 }
 
 async function computePgFromPython({
