@@ -1,22 +1,19 @@
 import { Pool } from "pg";
 
-declare global {
-  var __ecotekPool: Pool | undefined;
-}
-
 let pool: Pool | null = null;
 
 export function getPool() {
   if (pool) return pool;
   if (!process.env.DATABASE_URL) return null;
-  if (!global.__ecotekPool) {
-    global.__ecotekPool = new Pool({
+  const globalWithPool = globalThis as typeof globalThis & { __ecotekPool?: Pool };
+  if (!globalWithPool.__ecotekPool) {
+    globalWithPool.__ecotekPool = new Pool({
       connectionString: process.env.DATABASE_URL,
       max: 2,
       idleTimeoutMillis: 10_000,
     });
   }
-  pool = global.__ecotekPool;
+  pool = globalWithPool.__ecotekPool;
   return pool;
 }
 
