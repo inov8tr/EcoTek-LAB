@@ -25,6 +25,7 @@ export function TableBrowser({ tables }: { tables: string[] }) {
           className="w-64 rounded-lg border border-border px-3 py-2 text-sm"
           aria-describedby="table-search-help"
           value={term}
+          autoComplete="off"
           onChange={(event) => setTerm(event.target.value)}
         />
         <span id="table-search-help" className="text-xs text-[var(--color-text-muted)]">

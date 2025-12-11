@@ -64,13 +64,17 @@ export async function authenticate(
   }
 
   try {
-    await signIn("credentials", {
+    const result = await signIn("credentials", {
       email,
       password,
       totp,
       recoveryCode,
-      redirectTo: redirectTo as Route,
+      redirect: false,
     });
+
+    if (result?.error) {
+      return { error: mapAuthError({ type: "CredentialsSignin", message: result.error } as AuthError) };
+    }
   } catch (error) {
     if ((error as Error).name === "AuthError") {
       return { error: mapAuthError(error as AuthError) };
@@ -78,7 +82,7 @@ export async function authenticate(
     throw error;
   }
 
-  return { error: INVALID_MESSAGE };
+  redirect(redirectTo as Route);
 }
 
 export async function registerUser(

@@ -81,6 +81,7 @@ export default async function BinderTestsPage({ searchParams }: BinderTestsPageP
                 name="q"
                 placeholder="Search name"
                 defaultValue={q}
+                autoComplete="off"
                 className="w-48 text-sm outline-none"
               />
             </div>

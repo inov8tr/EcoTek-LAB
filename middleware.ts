@@ -1,7 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/api/auth", "/favicon", "/icon", "/apple-icon"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+  "/api/auth",
+  "/favicon",
+  "/icon",
+  "/apple-icon",
+];
 const ADMIN_PATHS = ["/admin", "/settings"];
 
 function isPublic(pathname: string) {

@@ -89,6 +89,7 @@ export default async function BatchesPage({
             name="q"
             placeholder="Search batch or operator"
             defaultValue={q}
+            autoComplete="off"
             className="w-48 text-sm outline-none"
           />
           <Button type="submit" variant="secondary" size="sm">
