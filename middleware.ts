@@ -1,5 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 
 const PUBLIC_PATHS = [
   "/login",
@@ -22,17 +22,14 @@ function requiresAdmin(pathname: string) {
   return ADMIN_PATHS.some((path) => pathname === path || pathname.startsWith(path));
 }
 
-export default async function middleware(req: NextRequest) {
+export default auth((req) => {
   const { pathname } = req.nextUrl;
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-
-  const user =
-    token && typeof token === "object"
-      ? {
-          status: (token as any).status as string | undefined,
-          role: (token as any).role as string | undefined,
-        }
-      : null;
+  const user = req.auth?.user
+    ? {
+        status: (req.auth.user as any).status as string | undefined,
+        role: (req.auth.user as any).role as string | undefined,
+      }
+    : null;
 
   if (isPublic(pathname)) {
     if (
@@ -62,7 +59,7 @@ export default async function middleware(req: NextRequest) {
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|ico)|api/public).*)"],

@@ -262,7 +262,9 @@ model User {
 model Session {
   id            String   @id @default(uuid())
   userId        String
-  jti           String   @unique
+  sessionToken  String   @unique
+  expires       DateTime
+  jti           String   @unique @default(uuid())
   userAgent     String?
   ipAddress     String?
   createdAt     DateTime @default(now())

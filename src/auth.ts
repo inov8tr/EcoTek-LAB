@@ -1,9 +1,10 @@
 import NextAuth, { type AuthError } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { randomUUID } from "crypto";
+import { PrismaAdapter } from "@auth/prisma-adapter";
 import { UserRole, UserStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { AUTH_SECRET } from "@/lib/auth-config";
 
 export const {
   handlers: { GET, POST },
@@ -11,7 +12,8 @@ export const {
   signIn,
   signOut,
 } = NextAuth({
-  session: { strategy: "jwt" },
+  adapter: PrismaAdapter(prisma),
+  session: { strategy: "database" },
   trustHost: true,
   pages: { signIn: "/login" },
   providers: [
@@ -98,38 +100,20 @@ export const {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.role = (user as { role?: UserRole }).role;
-        token.status = (user as { status?: UserStatus }).status;
-        token.sessionId = token.sessionId ?? randomUUID();
-        await prisma.session
-          .upsert({
-            where: { jti: token.sessionId as string },
-            create: { jti: token.sessionId as string, userId: (user as any).id },
-            update: { lastSeenAt: new Date(), revoked: false },
-          })
-          .catch((err) => console.error("Session upsert failed", err));
-      }
-      return token;
-    },
-    async session({ session, token }) {
+    async session({ session, user }) {
       if (session.user) {
         session.user = {
-          id: token.sub ?? session.user.id ?? "",
+          id: (user as any)?.id ?? session.user.id ?? "",
           email: session.user.email ?? null,
           name: session.user.name ?? null,
-          role: (token.role as UserRole) ?? UserRole.VIEWER,
-          status: (token.status as UserStatus) ?? UserStatus.PENDING,
+          role: ((user as any)?.role as UserRole) ?? UserRole.VIEWER,
+          status: ((user as any)?.status as UserStatus) ?? UserStatus.PENDING,
         } as typeof session.user & { role: UserRole; status: UserStatus };
       }
-      (session as any).sessionId = (token as any).sessionId ?? null;
       return session;
     },
   },
-  secret:
-    process.env.NEXTAUTH_SECRET ??
-    (process.env.NODE_ENV === "production" ? undefined : "development-secret"),
+  secret: AUTH_SECRET,
 });
 
 export type { AuthError };

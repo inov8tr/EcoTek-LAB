@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { cookies } from "next/headers";
 import { UserRole, UserStatus } from "@prisma/client";
 import { authenticator } from "otplib";
 import { getDatabaseStatus } from "@/lib/db";
@@ -55,6 +56,11 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const params = await searchParams;
   const user = await requireStatus(UserStatus.ACTIVE);
   const dbStatus = await getDatabaseStatus();
+  const cookieStore = cookies();
+  const currentSessionToken =
+    cookieStore.get("__Secure-authjs.session-token")?.value ??
+    cookieStore.get("authjs.session-token")?.value ??
+    null;
   const fullUser = await prisma.user.findUnique({
     where: { id: user.id },
     select: {
@@ -409,7 +415,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <div className="mt-3 divide-y rounded-lg border">
           {sessions.length === 0 && <p className="p-4 text-sm text-[var(--color-text-muted)]">No sessions found.</p>}
           {sessions.map((s) => {
-            const isCurrent = s.jti === user.sessionId;
+            const isCurrent = currentSessionToken ? s.sessionToken === currentSessionToken : false;
             const deviceLabel = describeUserAgent(s.userAgent);
             const geo = sessionGeo.find((g) => g.id === s.id)?.geo;
             return (
@@ -433,7 +439,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   {s.revoked && <span className="text-xs text-red-600">Revoked</span>}
                   {!s.revoked && (
                     <form action={revokeSession}>
-                      <input type="hidden" name="sessionId" value={s.jti} />
+                      <input type="hidden" name="sessionToken" value={s.sessionToken} />
                       <button
                         className="rounded bg-red-100 px-3 py-1 text-xs font-semibold text-red-800 disabled:opacity-50"
                         disabled={isCurrent}

@@ -168,17 +168,17 @@ export async function disableTwoFactor() {
 
 export async function revokeSession(formData: FormData) {
   const user = await requireActiveUser();
-  const jti = (formData.get("sessionId") ?? "").toString();
-  if (!jti) redirectWithMessage("Missing session id", "error");
+  const sessionToken = (formData.get("sessionToken") ?? "").toString();
+  if (!sessionToken) redirectWithMessage("Missing session token", "error");
   await prisma.session.updateMany({
-    where: { jti, userId: user.id },
+    where: { sessionToken, userId: user.id },
     data: { revoked: true, revokedAt: new Date() },
   });
   await prisma.securityEvent.create({
     data: {
       userId: user.id,
       eventType: "SESSION_REVOKED",
-      detail: `Session revoked ${jti}`,
+      detail: `Session revoked ${sessionToken}`,
       category: "security",
     },
   });

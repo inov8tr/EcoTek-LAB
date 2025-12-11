@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { NotificationsStream } from "./notifications/stream";
 import type { NotificationPreview } from "@/types/notifications";
 
+export const dynamic = "force-dynamic";
+
 export default async function PortalLayout({
   children,
 }: {
