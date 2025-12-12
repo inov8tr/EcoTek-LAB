@@ -46,14 +46,14 @@ export default async function LoginPage({
         <div className="rounded-xl border border-dashed border-border bg-[var(--color-bg-alt)]/80 p-4 text-xs text-[var(--color-text-muted)] text-center">
           <p>
             Need access?{" "}
-            <Link href={"/signup" as Route} className="font-semibold text-[var(--color-text-link)]">
+            <Link href={"https://lab.ecotek.green/signup" as Route} className="font-semibold text-[var(--color-text-link)]">
               Request an account
             </Link>
             .
           </p>
           <p className="mt-2">
             Forgot password?{" "}
-            <Link href={"/reset-password" as Route} className="font-semibold text-[var(--color-text-link)]">
+            <Link href={"https://lab.ecotek.green/reset-password" as Route} className="font-semibold text-[var(--color-text-link)]">
               Reset it here
             </Link>
             .
