@@ -5,10 +5,10 @@ import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { Buffer } from "node:buffer";
 import { authenticator } from "otplib";
-import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { randomUUID } from "crypto";
 import { sendMail, isEmailEnabled } from "@/lib/mailer";
+import { dbQuery } from "@/lib/db-proxy";
 
 function redirectWithMessage(message: string, type: "success" | "error" = "success") {
   const params = new URLSearchParams();
@@ -39,31 +39,42 @@ export async function updateProfile(formData: FormData) {
     avatarUrl = `data:${mime};base64,${base64}`;
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      displayName: (formData.get("displayName") ?? "").toString().trim() || null,
+  const displayName = (formData.get("displayName") ?? "").toString().trim() || null;
+  const bannerUrl = (formData.get("bannerUrl") ?? "").toString().trim() || null;
+  const handle = (formData.get("handle") ?? "").toString().trim() || null;
+  const bio = (formData.get("bio") ?? "").toString().trim() || null;
+  const locale = (formData.get("locale") ?? "").toString().trim() || "en-US";
+  const timeZone = (formData.get("timeZone") ?? "").toString().trim() || "UTC";
+  const theme = (formData.get("theme") ?? "system").toString();
+  const notificationEmailOptIn = formData.get("notificationEmailOptIn") === "on";
+  const notificationPushOptIn = formData.get("notificationPushOptIn") === "on";
+  const notificationInAppOptIn = formData.get("notificationInAppOptIn") === "on";
+
+  await dbQuery(
+    [
+      'UPDATE "User" SET "displayName" = $1, "avatarUrl" = $2, "bannerUrl" = $3, "handle" = $4, "bio" = $5,',
+      '"locale" = $6, "timeZone" = $7, "theme" = $8, "notificationEmailOptIn" = $9,',
+      '"notificationPushOptIn" = $10, "notificationInAppOptIn" = $11, "updatedAt" = now() WHERE "id" = $12',
+    ].join(" "),
+    [
+      displayName,
       avatarUrl,
-      bannerUrl: (formData.get("bannerUrl") ?? "").toString().trim() || null,
-      handle: (formData.get("handle") ?? "").toString().trim() || null,
-      bio: (formData.get("bio") ?? "").toString().trim() || null,
-      locale: (formData.get("locale") ?? "").toString().trim() || "en-US",
-      timeZone: (formData.get("timeZone") ?? "").toString().trim() || "UTC",
-      theme: (formData.get("theme") ?? "system").toString(),
-      notificationEmailOptIn: formData.get("notificationEmailOptIn") === "on",
-      notificationPushOptIn: formData.get("notificationPushOptIn") === "on",
-      notificationInAppOptIn: formData.get("notificationInAppOptIn") === "on",
-    },
-  });
-  await prisma.securityEvent.create({
-    data: {
-      userId: user.id,
-      eventType: "PROFILE_UPDATED",
-      detail: "Profile or preferences updated",
-      category: "account",
-      channel: "in-app",
-    },
-  });
+      bannerUrl,
+      handle,
+      bio,
+      locale,
+      timeZone,
+      theme,
+      notificationEmailOptIn,
+      notificationPushOptIn,
+      notificationInAppOptIn,
+      user.id,
+    ],
+  );
+  await dbQuery(
+    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category", "channel") VALUES ($1, $2, $3, $4, $5)',
+    [user.id, "PROFILE_UPDATED", "Profile or preferences updated", "account", "in-app"],
+  );
   revalidatePath("/settings");
   redirectWithMessage("Profile updated");
 }
@@ -77,7 +88,10 @@ export async function changePassword(formData: FormData) {
     redirectWithMessage("Missing password fields", "error");
   }
 
-  const record = await prisma.user.findUnique({ where: { id: user.id } });
+  const [record] = await dbQuery<{ passwordHash: string }>(
+    'SELECT "passwordHash" FROM "User" WHERE "id" = $1 LIMIT 1',
+    [user.id],
+  );
   if (!record) redirect("/login");
 
   const valid = await bcrypt.compare(currentPassword, record.passwordHash);
@@ -86,10 +100,14 @@ export async function changePassword(formData: FormData) {
   }
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
-  await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
-  await prisma.securityEvent.create({
-    data: { userId: user.id, eventType: "PASSWORD_CHANGED", detail: "Password updated", category: "security" },
-  });
+  await dbQuery('UPDATE "User" SET "passwordHash" = $1, "updatedAt" = now() WHERE "id" = $2', [
+    passwordHash,
+    user.id,
+  ]);
+  await dbQuery(
+    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
+    [user.id, "PASSWORD_CHANGED", "Password updated", "security"],
+  );
   revalidatePath("/settings");
   redirectWithMessage("Password updated");
 }
@@ -97,18 +115,11 @@ export async function changePassword(formData: FormData) {
 export async function toggleLoginAlerts(formData: FormData) {
   const user = await requireActiveUser();
   const enabled = formData.get("loginAlerts") === "on";
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { loginAlerts: enabled },
-  });
-  await prisma.securityEvent.create({
-    data: {
-      userId: user.id,
-      eventType: "LOGIN_ALERTS",
-      detail: enabled ? "Login alerts enabled" : "Login alerts disabled",
-      category: "account",
-    },
-  });
+  await dbQuery('UPDATE "User" SET "loginAlerts" = $1, "updatedAt" = now() WHERE "id" = $2', [enabled, user.id]);
+  await dbQuery(
+    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
+    [user.id, "LOGIN_ALERTS", enabled ? "Login alerts enabled" : "Login alerts disabled", "account"],
+  );
   revalidatePath("/settings");
   redirectWithMessage("Login alerts updated");
 }
@@ -116,13 +127,14 @@ export async function toggleLoginAlerts(formData: FormData) {
 export async function generateTwoFactor() {
   const user = await requireActiveUser();
   const secret = authenticator.generateSecret();
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { twoFactorSecret: secret, twoFactorEnabled: false },
-  });
-  await prisma.securityEvent.create({
-    data: { userId: user.id, eventType: "2FA_SECRET", detail: "2FA secret generated", category: "security" },
-  });
+  await dbQuery(
+    'UPDATE "User" SET "twoFactorSecret" = $1, "twoFactorEnabled" = false, "updatedAt" = now() WHERE "id" = $2',
+    [secret, user.id],
+  );
+  await dbQuery(
+    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
+    [user.id, "2FA_SECRET", "2FA secret generated", "security"],
+  );
   revalidatePath("/settings");
   redirectWithMessage("2FA secret generated. Scan the new code.");
 }
@@ -130,10 +142,10 @@ export async function generateTwoFactor() {
 export async function verifyTwoFactor(formData: FormData) {
   const user = await requireActiveUser();
   const code = (formData.get("code") ?? "").toString().trim();
-  const record = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { twoFactorSecret: true },
-  });
+  const [record] = await dbQuery<{ twoFactorSecret: string | null }>(
+    'SELECT "twoFactorSecret" FROM "User" WHERE "id" = $1 LIMIT 1',
+    [user.id],
+  );
   if (!record?.twoFactorSecret) {
     redirectWithMessage("No 2FA secret to verify", "error");
   }
@@ -141,13 +153,11 @@ export async function verifyTwoFactor(formData: FormData) {
   if (!ok) {
     redirectWithMessage("Invalid 2FA code", "error");
   }
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { twoFactorEnabled: true },
-  });
-  await prisma.securityEvent.create({
-    data: { userId: user.id, eventType: "2FA_ENABLED", detail: "2FA enabled", category: "security" },
-  });
+  await dbQuery('UPDATE "User" SET "twoFactorEnabled" = true, "updatedAt" = now() WHERE "id" = $1', [user.id]);
+  await dbQuery(
+    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
+    [user.id, "2FA_ENABLED", "2FA enabled", "security"],
+  );
   await regenerateRecoveryCodes();
   revalidatePath("/settings");
   redirectWithMessage("2FA enabled");
@@ -155,13 +165,14 @@ export async function verifyTwoFactor(formData: FormData) {
 
 export async function disableTwoFactor() {
   const user = await requireActiveUser();
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { twoFactorEnabled: false, twoFactorSecret: null },
-  });
-  await prisma.securityEvent.create({
-    data: { userId: user.id, eventType: "2FA_DISABLED", detail: "2FA disabled", category: "security" },
-  });
+  await dbQuery(
+    'UPDATE "User" SET "twoFactorEnabled" = false, "twoFactorSecret" = NULL, "updatedAt" = now() WHERE "id" = $1',
+    [user.id],
+  );
+  await dbQuery(
+    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
+    [user.id, "2FA_DISABLED", "2FA disabled", "security"],
+  );
   revalidatePath("/settings");
   redirectWithMessage("2FA disabled");
 }
@@ -170,31 +181,25 @@ export async function revokeSession(formData: FormData) {
   const user = await requireActiveUser();
   const sessionToken = (formData.get("sessionToken") ?? "").toString();
   if (!sessionToken) redirectWithMessage("Missing session token", "error");
-  await prisma.session.updateMany({
-    where: { sessionToken, userId: user.id },
-    data: { revoked: true, revokedAt: new Date() },
-  });
-  await prisma.securityEvent.create({
-    data: {
-      userId: user.id,
-      eventType: "SESSION_REVOKED",
-      detail: `Session revoked ${sessionToken}`,
-      category: "security",
-    },
-  });
+  await dbQuery('UPDATE "Session" SET "revoked" = true, "revokedAt" = now() WHERE "sessionToken" = $1 AND "userId" = $2', [
+    sessionToken,
+    user.id,
+  ]);
+  await dbQuery(
+    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
+    [user.id, "SESSION_REVOKED", `Session revoked ${sessionToken}`, "security"],
+  );
   revalidatePath("/settings");
   redirectWithMessage("Session revoked");
 }
 
 export async function revokeAllSessions() {
   const user = await requireActiveUser();
-  await prisma.session.updateMany({
-    where: { userId: user.id },
-    data: { revoked: true, revokedAt: new Date() },
-  });
-  await prisma.securityEvent.create({
-    data: { userId: user.id, eventType: "SESSIONS_REVOKED", detail: "All sessions revoked", category: "security" },
-  });
+  await dbQuery('UPDATE "Session" SET "revoked" = true, "revokedAt" = now() WHERE "userId" = $1', [user.id]);
+  await dbQuery(
+    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
+    [user.id, "SESSIONS_REVOKED", "All sessions revoked", "security"],
+  );
   revalidatePath("/settings");
   redirectWithMessage("All sessions revoked");
 }
@@ -202,20 +207,23 @@ export async function revokeAllSessions() {
 export async function regenerateRecoveryCodes() {
   const user = await requireActiveUser();
   const codes = Array.from({ length: 10 }, () => randomUUID().slice(0, 8).toUpperCase());
-  await prisma.$transaction([
-    prisma.recoveryCode.deleteMany({ where: { userId: user.id } }),
-    prisma.recoveryCode.createMany({
-      data: codes.map((code) => ({ userId: user.id, code })),
-    }),
-    prisma.securityEvent.create({
-      data: {
-        userId: user.id,
-        eventType: "2FA_RECOVERY_REGEN",
-        detail: "Recovery codes regenerated",
-        category: "security",
-      },
-    }),
-  ]);
+  await dbQuery('DELETE FROM "RecoveryCode" WHERE "userId" = $1', [user.id]);
+  const params: unknown[] = [];
+  const values = codes
+    .map((code, idx) => {
+      const userParam = idx * 2 + 1;
+      const codeParam = idx * 2 + 2;
+      params.push(user.id, code);
+      return `($${userParam}, $${codeParam})`;
+    })
+    .join(", ");
+  if (values) {
+    await dbQuery(`INSERT INTO "RecoveryCode" ("userId", "code") VALUES ${values}`, params);
+  }
+  await dbQuery(
+    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
+    [user.id, "2FA_RECOVERY_REGEN", "Recovery codes regenerated", "security"],
+  );
   revalidatePath("/settings");
   redirectWithMessage("Recovery codes regenerated");
 }
@@ -224,19 +232,14 @@ export async function generateVerificationLink() {
   const user = await requireActiveUser();
   const token = randomUUID();
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
-  await prisma.emailVerificationToken.create({
-    data: { token, userId: user.id, expiresAt },
-  });
-  await prisma.securityEvent.create({
-    data: {
-      userId: user.id,
-      eventType: "EMAIL_VERIFY_LINK",
-      detail: "Verification link generated",
-      category: "account",
-      channel: "email",
-      link: `/verify-email?token=${token}`,
-    },
-  });
+  await dbQuery(
+    'INSERT INTO "EmailVerificationToken" ("token", "userId", "expiresAt") VALUES ($1, $2, $3)',
+    [token, user.id, expiresAt.toISOString()],
+  );
+  await dbQuery(
+    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category", "channel", "link") VALUES ($1, $2, $3, $4, $5, $6)',
+    [user.id, "EMAIL_VERIFY_LINK", "Verification link generated", "account", "email", `/verify-email?token=${token}`],
+  );
   const baseUrl = process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL ?? "";
   if (isEmailEnabled() && baseUrl) {
     const verifyUrl = `${baseUrl.replace(/\/$/, "")}/verify-email?token=${token}`;
@@ -256,22 +259,19 @@ export async function updateNotificationPrefs(formData: FormData) {
   const email = formData.get("notificationEmailOptIn") === "on";
   const push = formData.get("notificationPushOptIn") === "on";
   const inApp = formData.get("notificationInAppOptIn") === "on";
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      notificationEmailOptIn: email,
-      notificationPushOptIn: push,
-      notificationInAppOptIn: inApp,
-    },
-  });
-  await prisma.securityEvent.create({
-    data: {
-      userId: user.id,
-      eventType: "NOTIFICATION_PREFS",
-      detail: `Prefs updated (email:${email ? "on" : "off"}, push:${push ? "on" : "off"}, in-app:${inApp ? "on" : "off"})`,
-      category: "account",
-    },
-  });
+  await dbQuery(
+    'UPDATE "User" SET "notificationEmailOptIn" = $1, "notificationPushOptIn" = $2, "notificationInAppOptIn" = $3, "updatedAt" = now() WHERE "id" = $4',
+    [email, push, inApp, user.id],
+  );
+  await dbQuery(
+    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
+    [
+      user.id,
+      "NOTIFICATION_PREFS",
+      `Prefs updated (email:${email ? "on" : "off"}, push:${push ? "on" : "off"}, in-app:${inApp ? "on" : "off"})`,
+      "account",
+    ],
+  );
   revalidatePath("/settings");
   redirectWithMessage("Notification preferences updated");
 }

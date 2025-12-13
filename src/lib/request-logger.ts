@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { dbQuery } from "@/lib/db-proxy";
 
 type LogOptions = {
   req: NextRequest;
@@ -31,15 +31,16 @@ export async function logApiRequest(opts: LogOptions) {
   if (!shouldLog(opts.sampleRate)) return;
   if (!opts.userId) return;
   const meta = getRequestMeta(opts.req);
-  await prisma.securityEvent.create({
-    data: {
-      userId: opts.userId,
-      eventType: "API_REQUEST",
-      detail: `${meta.method} ${meta.path} -> ${opts.status} (${opts.action})`,
-      ipAddress: meta.ip,
-      userAgent: meta.userAgent,
-      category: opts.category ?? "api",
-      channel: "audit",
-    },
-  });
+  await dbQuery(
+    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "ipAddress", "userAgent", "category", "channel") VALUES ($1, $2, $3, $4, $5, $6, $7)',
+    [
+      opts.userId,
+      "API_REQUEST",
+      `${meta.method} ${meta.path} -> ${opts.status} (${opts.action})`,
+      meta.ip,
+      meta.userAgent,
+      opts.category ?? "api",
+      "audit",
+    ],
+  );
 }

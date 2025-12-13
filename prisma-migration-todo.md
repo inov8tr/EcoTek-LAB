@@ -1,0 +1,4 @@
+- Extend VM API gateway `/db/query` to accept `{ query, params }` and use `pool.query(query, params || [])`; gateway files were not present on this host (`/home/ecotek/api-gateway` not found), so this still needs to be done on the VM.
+- Migrate remaining Prisma usage (non-auth surfaces) to the DB proxy:
+  - Portal views/actions for binder tests, batches, capsules, notifications, admin/database exports, uploads, analytics loaders, compliance helpers, and data-service utilities still import `@/lib/prisma`.
+  - Transactions/nested writes in these areas may need dedicated API endpoints rather than single-statement `/db/query` calls.

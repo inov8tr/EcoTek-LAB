@@ -1,10 +1,9 @@
 import NextAuth, { type AuthError } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { UserRole, UserStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import type { User, UserRole, UserStatus } from "@prisma/client";
 import { AUTH_SECRET } from "@/lib/auth-config";
+import { dbQuery } from "@/lib/db-proxy";
 
 export const {
   handlers: { GET, POST },
@@ -12,7 +11,6 @@ export const {
   signIn,
   signOut,
 } = NextAuth({
-  adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   trustHost: true,
   pages: { signIn: "/login" },
@@ -40,16 +38,16 @@ export const {
           throw new Error("INVALID_CREDENTIALS");
         }
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        const [user] = await dbQuery<User>('SELECT * FROM "User" WHERE "email" = $1 LIMIT 1', [email]);
         if (!user) {
           throw new Error("INVALID_CREDENTIALS");
         }
 
-        if (user.status === UserStatus.PENDING) {
+        if (user.status === "PENDING") {
           throw new Error("PENDING");
         }
 
-        if (user.status === UserStatus.SUSPENDED) {
+        if (user.status === "SUSPENDED") {
           throw new Error("SUSPENDED");
         }
 
@@ -58,7 +56,7 @@ export const {
           throw new Error("INVALID_CREDENTIALS");
         }
 
-        if (user.status !== UserStatus.ACTIVE) {
+        if (user.status !== "ACTIVE") {
           throw new Error("INACTIVE");
         }
 
@@ -73,15 +71,16 @@ export const {
             if (ok) passed2fa = true;
           }
           if (!passed2fa && recoveryCode) {
-            const codeRow = await prisma.recoveryCode.findFirst({
-              where: { userId: user.id, code: recoveryCode, used: false },
-            });
+            const [codeRow] = await dbQuery<{ id: string }>(
+              'SELECT "id" FROM "RecoveryCode" WHERE "userId" = $1 AND "code" = $2 AND "used" = false ORDER BY "createdAt" ASC LIMIT 1',
+              [user.id, recoveryCode],
+            );
             if (codeRow) {
               passed2fa = true;
-              await prisma.recoveryCode.update({
-                where: { id: codeRow.id },
-                data: { used: true, usedAt: new Date() },
-              });
+              await dbQuery(
+                'UPDATE "RecoveryCode" SET "used" = true, "usedAt" = now() WHERE "id" = $1',
+                [codeRow.id],
+              );
             }
           }
           if (!passed2fa) {
@@ -106,13 +105,10 @@ export const {
         token.status = (user as { status?: UserStatus }).status;
         token.sessionId = token.sessionId ?? generateSessionId();
         const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
-        await prisma.session
-          .upsert({
-            where: { sessionToken: token.sessionId as string },
-            create: { sessionToken: token.sessionId as string, userId: (user as any).id, expires },
-            update: { expires, lastSeenAt: new Date(), revoked: false },
-          })
-          .catch((err) => console.error("Session upsert failed", err));
+        await dbQuery(
+          'INSERT INTO "Session" ("userId", "sessionToken", "expires", "lastSeenAt", "revoked") VALUES ($1, $2, $3, now(), false) ON CONFLICT ("sessionToken") DO UPDATE SET "expires" = $3, "lastSeenAt" = now(), "revoked" = false',
+          [(user as any).id, token.sessionId as string, expires.toISOString()],
+        ).catch((err) => console.error("Session upsert failed", err));
       }
       return token;
     },
@@ -122,8 +118,8 @@ export const {
           id: (user as any)?.id ?? (token.sub as string | undefined) ?? session.user.id ?? "",
           email: session.user.email ?? null,
           name: session.user.name ?? null,
-          role: ((user as any)?.role as UserRole) ?? ((token.role as UserRole) ?? UserRole.VIEWER),
-          status: ((user as any)?.status as UserStatus) ?? ((token.status as UserStatus) ?? UserStatus.PENDING),
+          role: ((user as any)?.role as UserRole) ?? ((token.role as UserRole) ?? ("VIEWER" as UserRole)),
+          status: ((user as any)?.status as UserStatus) ?? ((token.status as UserStatus) ?? ("PENDING" as UserStatus)),
         } as typeof session.user & { role: UserRole; status: UserStatus };
       }
       return session;

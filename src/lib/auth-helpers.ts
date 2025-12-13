@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import type { Route } from "next";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
-import { UserRole, UserStatus } from "@prisma/client";
+import { dbQuery } from "@/lib/db-proxy";
+import type { UserRole, UserStatus } from "@prisma/client";
 
 export type CurrentUser = {
   id: string;
@@ -32,30 +32,15 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   const sessionUser = session?.user;
   if (!sessionUser?.id) return null;
 
-  const dbUser = await prisma.user.findUnique({
-    where: { id: sessionUser.id },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      status: true,
-      displayName: true,
-      avatarUrl: true,
-      bannerUrl: true,
-      handle: true,
-      pronouns: true,
-      bio: true,
-      locale: true,
-      timeZone: true,
-      theme: true,
-      loginAlerts: true,
-      twoFactorEnabled: true,
-      notificationEmailOptIn: true,
-      notificationPushOptIn: true,
-      notificationInAppOptIn: true,
-    },
-  });
+  const [dbUser] = await dbQuery<CurrentUser>(
+    [
+      'SELECT "id", "email", "name", "role", "status", "displayName", "avatarUrl", "bannerUrl",',
+      '"handle", "pronouns", "bio", "locale", "timeZone", "theme", "loginAlerts",',
+      '"twoFactorEnabled", "notificationEmailOptIn", "notificationPushOptIn", "notificationInAppOptIn"',
+      'FROM "User" WHERE "id" = $1 LIMIT 1',
+    ].join(" "),
+    [sessionUser.id],
+  );
 
   if (!dbUser) return null;
 

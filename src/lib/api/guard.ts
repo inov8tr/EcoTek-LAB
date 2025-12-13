@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { UserRole } from "@prisma/client";
+import type { UserRole } from "@prisma/client";
 
 export type Role = "ADMIN" | "LAB" | "VIEWER" | "RESEARCHER";
 

@@ -3,9 +3,9 @@
 import type { Route } from "next";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
-import { UserRole, UserStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import type { User, UserRole, UserStatus } from "@prisma/client";
 import { auth, signIn, signOut, type AuthError } from "@/auth";
+import { dbQuery } from "@/lib/db-proxy";
 
 type AuthState = {
   error?: string;
@@ -50,16 +50,16 @@ export async function authenticate(
     return { error: INVALID_MESSAGE };
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const [existing] = await dbQuery<User>('SELECT * FROM "User" WHERE "email" = $1 LIMIT 1', [email]);
   if (!existing) {
     return { error: INVALID_MESSAGE };
   }
 
-  if (existing.status === UserStatus.PENDING) {
+  if (existing.status === "PENDING") {
     return { error: "Your account is still pending admin approval." };
   }
 
-  if (existing.status === UserStatus.SUSPENDED) {
+  if (existing.status === "SUSPENDED") {
     return { error: "This account has been suspended. Contact an administrator." };
   }
 
@@ -97,22 +97,17 @@ export async function registerUser(
     return { error: "Please complete all required fields." };
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const [existing] = await dbQuery<User>('SELECT * FROM "User" WHERE "email" = $1 LIMIT 1', [email]);
   if (existing) {
     return { error: "An account with that email already exists." };
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  await prisma.user.create({
-    data: {
-      name,
-      email,
-      passwordHash,
-      role: UserRole.VIEWER,
-      status: UserStatus.PENDING,
-    },
-  });
+  await dbQuery(
+    'INSERT INTO "User" ("name", "email", "passwordHash", "role", "status") VALUES ($1, $2, $3, $4, $5)',
+    [name, email, passwordHash, "VIEWER" as UserRole, "PENDING" as UserStatus],
+  );
 
   return {
     success: "Request received. Your account is pending admin approval.",

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import type { CurrentUser } from "@/lib/auth-helpers";
-import { UserRole, UserStatus } from "@prisma/client";
+import type { UserRole, UserStatus } from "@prisma/client";
 
 type GuardOptions = {
   roles?: UserRole[];
@@ -21,7 +21,7 @@ export async function guardApiUser(
     return { response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   }
 
-  if (options.requireActive && user.status !== UserStatus.ACTIVE) {
+  if (options.requireActive && user.status !== ("ACTIVE" as UserStatus)) {
     return {
       response: NextResponse.json({ error: "Account not active" }, { status: 403 }),
     };
