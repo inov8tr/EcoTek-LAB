@@ -64,6 +64,6 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    "/((?!api/ocr|_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|ico)|api/public).*)",
+    "/((?!api/ocr|api/db|_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|ico)|api/public).*)",
   ],
 };
