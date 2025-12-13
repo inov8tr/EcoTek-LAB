@@ -7,6 +7,7 @@ const PUBLIC_PATHS = [
   "/forgot-password",
   "/reset-password",
   "/verify-email",
+  "/api/ocr",
   "/api/auth",
   "/favicon",
   "/icon",
@@ -62,5 +63,7 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|ico)|api/public).*)"],
+  matcher: [
+    "/((?!api/ocr|_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|ico)|api/public).*)",
+  ],
 };

@@ -10,9 +10,13 @@ import { gatewayTimeline, spotlightTasks } from "@/lib/data";
 import { getDatabaseStatus } from "@/lib/db";
 import { getDashboardData } from "@/lib/data-service";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { getPythonStatus } from "@/lib/services/python";
 
 export default async function DashboardPage() {
-  const dbStatus = await getDatabaseStatus();
+  const [dbStatus, pythonStatus] = await Promise.all([
+    getDatabaseStatus(),
+    getPythonStatus(),
+  ]);
   const currentUser = await getCurrentUser();
   const isAdmin = currentUser?.role === "ADMIN";
 
@@ -40,6 +44,7 @@ export default async function DashboardPage() {
               6 Active Pipelines
             </span>
             <StatusPill label="PostgreSQL" healthy={dbStatus.connected} />
+            <StatusPill label="Python OCR" healthy={pythonStatus.connected} />
           </div>
         </div>
       </section>

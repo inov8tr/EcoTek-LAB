@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 export function ActionsMenu({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
   const [archiving, setArchiving] = useState(false);
 
@@ -25,6 +26,7 @@ export function ActionsMenu({ id }: { id: string }) {
   return (
     <div className="relative inline-block text-left" ref={ref}>
       <button
+        ref={buttonRef}
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -35,7 +37,15 @@ export function ActionsMenu({ id }: { id: string }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-44 rounded-md border bg-white shadow-lg ring-1 ring-black/5 z-30">
+        <div
+          className="fixed w-44 rounded-md border bg-white shadow-lg ring-1 ring-black/5 z-[110]"
+          style={{
+            top: buttonRef.current ? buttonRef.current.getBoundingClientRect().bottom + 8 : undefined,
+            left: buttonRef.current
+              ? buttonRef.current.getBoundingClientRect().right - 176 /* width */
+              : undefined,
+          }}
+        >
           <div className="py-1 text-sm text-gray-800">
             <MenuItem href={`/binder-tests/${id}/review` as Route} label="Review" onSelect={() => setOpen(false)} />
             <MenuItem href={`/binder-tests/${id}` as Route} label="View Data" onSelect={() => setOpen(false)} />

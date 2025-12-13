@@ -22,7 +22,7 @@ export async function runHybridExtractionForBinderTest(folderPath: string): Prom
   const images = files.filter((f) => /\.(png|jpe?g|webp|heic)$/i.test(f));
 
   let parsed: BinderTestExtractedData = { ...EMPTY_EXTRACTED };
-  let sources: BinderTestValueSources = {};
+  const sources: BinderTestValueSources = {};
 
   // Deterministic parse from first PDF (if any)
   if (pdfs.length) {

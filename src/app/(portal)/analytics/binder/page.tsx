@@ -1,30 +1,27 @@
 import AnalyticsTabs from "@/components/analytics/AnalyticsTabs";
 import TestSetInlineCreatorClient from "@/components/analytics/test-sets/InlineCreatorClient";
-import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth-helpers";
 
-function resolveBaseUrl() {
-  const envUrl = process.env.NEXT_PUBLIC_BASE_URL;
-  if (envUrl && envUrl.startsWith("http")) return envUrl;
-  const vercel = process.env.VERCEL_URL;
-  if (vercel) return `https://${vercel}`;
-  return "http://localhost:3000";
-}
-
-export default async function BinderAnalyticsPage() {
-  const baseUrl = resolveBaseUrl();
-  const cookieHeader = cookies().toString();
+export default async function BinderAnalyticsPage({
+  searchParams,
+}: {
+  searchParams: { setId?: string };
+}) {
   let sets: any[] = [];
 
   try {
-    const res = await fetch(`${baseUrl}/api/analysis-sets/list`, {
-      cache: "no-store",
-      headers: cookieHeader ? { cookie: cookieHeader } : undefined,
-    });
+    const user = await getCurrentUser();
+    if (!user) throw new Error("Unauthorized");
 
-    if (!res.ok) throw new Error(`Failed to load test sets (${res.status})`);
+    const where =
+      user.role === "ADMIN"
+        ? undefined
+        : {
+            OR: [{ ownerId: user.id }, { ownerId: null }],
+          };
 
-    const json = await res.json();
-    sets = json.data ?? [];
+    sets = await prisma.analysisSet.findMany({ where, orderBy: { createdAt: "desc" } });
   } catch (err) {
     return (
       <div className="flex flex-col items-center justify-center space-y-4 p-10">
@@ -55,6 +52,18 @@ export default async function BinderAnalyticsPage() {
     );
   }
 
-  // If sets exist → show analytics tabs
-  return <AnalyticsTabs initialSets={sets} />;
+  const initialSetId = searchParams?.setId ?? sets[0]?.id ?? null;
+
+  // If sets exist → show analytics tabs, with manage link to dedicated page
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Analytics</h2>
+        <a href="/analytics/test-sets" className="text-sm text-brand-primary underline">
+          Create / Manage Test Sets
+        </a>
+      </div>
+      <AnalyticsTabs initialSets={sets} initialTestSetId={initialSetId} />
+    </div>
+  );
 }

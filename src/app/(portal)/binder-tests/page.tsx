@@ -6,7 +6,6 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ActionsMenu } from "@/components/binder-tests/ActionsMenu";
 import { EmptyState } from "@/components/ui/empty-state";
 
 function formatDate(date: Date) {
@@ -151,16 +150,32 @@ export default async function BinderTestsPage({ searchParams }: BinderTestsPageP
                   <th className="py-2 px-4 text-left">CRM / Reagent / Aerosil</th>
                   <th className="py-2 px-4 text-left">Status</th>
                   <th className="py-2 px-4 text-left">Created</th>
-                  <th className="py-2 pl-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {tests.map((test) => (
                   <tr key={test.id} className="border-b last:border-0 hover:bg-muted/40">
                     <td className="py-2 pr-4">
-                      <Link href={`/binder-tests/${test.id}` as Route} className="font-medium text-primary hover:underline">
-                        {test.name}
-                      </Link>
+                      <div className="flex flex-col">
+                        <Link
+                          href={`/binder-tests/${test.id}/review` as Route}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {test.name || test.testName || "Untitled Binder Test"}
+                        </Link>
+                        <Link
+                          href={`/binder-tests/${test.id}` as Route}
+                          className="text-xs text-muted-foreground hover:underline"
+                        >
+                          View data
+                        </Link>
+                        <Link
+                          href={`/binder-tests/${test.id}/documents` as Route}
+                          className="text-xs text-muted-foreground hover:underline"
+                        >
+                          Documents
+                        </Link>
+                      </div>
                     </td>
                     <td className="py-2 px-4">{test.batchId ?? "-"}</td>
                     <td className="py-2 px-4">{test.binderSource ?? "-"}</td>
@@ -173,9 +188,6 @@ export default async function BinderTestsPage({ searchParams }: BinderTestsPageP
                       <Badge variant="secondary">{test.status}</Badge>
                     </td>
                     <td className="py-2 px-4 text-xs text-muted-foreground">{formatDate(test.createdAt)}</td>
-                    <td className="py-2 pl-4 text-right">
-                      <ActionsMenu id={test.id} />
-                    </td>
                   </tr>
                 ))}
               </tbody>

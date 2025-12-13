@@ -68,15 +68,10 @@ export function UserMenu({ user, unreadCount = 0 }: { user: CurrentUser; unreadC
         aria-label="Open account menu"
         aria-expanded={open}
         aria-haspopup="menu"
-        className="relative flex h-14 w-14 items-center justify-center rounded-full border border-border bg-white shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]"
-      >
-        <AvatarCircle src={user.avatarUrl ?? undefined} alt={user.displayName ?? user.name ?? "User"} fallback={initial} />
-        {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[var(--color-accent-primary)] px-[6px] text-[10px] font-semibold text-white">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </button>
+      className="relative flex h-14 w-14 items-center justify-center rounded-full border border-border bg-white shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]"
+    >
+      <AvatarCircle src={user.avatarUrl ?? undefined} alt={user.displayName ?? user.name ?? "User"} fallback={initial} />
+    </button>
 
       {open && (
         <div
@@ -211,7 +206,7 @@ function MenuItem({
       onClick={onSelect}
       ref={(el) => {
         if (firstRef) {
-          // eslint-disable-next-line no-param-reassign
+           
           (firstRef as any).current = el;
         }
         registerRef?.(el);

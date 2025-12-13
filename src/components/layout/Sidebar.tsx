@@ -15,6 +15,7 @@ interface SidebarProps {
   userName: string;
   userRole: Role | string;
   userCategory?: string | null;
+  avatarUrl?: string | null;
 }
 
 const ROLE_FALLBACK: Role = "VIEWER";
@@ -26,7 +27,7 @@ function normalizeRole(role: string | Role): Role {
   return ROLE_FALLBACK;
 }
 
-export function Sidebar({ userName, userRole, userCategory }: SidebarProps) {
+export function Sidebar({ userName, userRole, userCategory, avatarUrl }: SidebarProps) {
   const pathname = usePathname() ?? "/dashboard";
 
   // Mobile drawer
@@ -157,15 +158,15 @@ export function Sidebar({ userName, userRole, userCategory }: SidebarProps) {
                             `
                             relative flex items-center gap-3 
                             px-4 py-2.5 rounded-md cursor-pointer 
-                            text-neutral-700 hover:bg-neutral-100 
+                            text-neutral-700 hover:bg-[var(--color-accent-primary)]/10 hover:text-[var(--color-accent-primary)]
                             transition-colors
                           `,
                             isCollapsed && "justify-center",
-                            isActive && "bg-neutral-100 text-brand-primary font-medium"
+                            isActive && "bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-primary)] font-semibold"
                           )}
                         >
                           {isActive && (
-                            <span className="absolute left-0 top-0 h-full w-[3px] bg-brand-primary rounded-r-md" />
+                            <span className="absolute left-0 top-0 h-full w-[3px] bg-[var(--color-accent-primary)] rounded-r-md" />
                           )}
 
                           <Icon className="size-5 text-neutral-600 group-hover:text-neutral-700 group-data-[active=true]:text-brand-primary" />
@@ -202,15 +203,24 @@ export function Sidebar({ userName, userRole, userCategory }: SidebarProps) {
         {/* FOOTER */}
         <div className="border-t border-neutral-200 bg-white p-4">
           <div className="flex items-center gap-3">
-            <div
-              className="
-              flex h-10 w-10 items-center justify-center 
-              rounded-full bg-neutral-100 
-              text-sm font-medium text-neutral-700
-            "
-            >
-              {initials}
-            </div>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={userName}
+                className="h-10 w-10 rounded-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div
+                className="
+                flex h-10 w-10 items-center justify-center 
+                rounded-full bg-neutral-100 
+                text-sm font-medium text-neutral-700
+              "
+              >
+                {initials}
+              </div>
+            )}
 
             {!isCollapsed && (
               <div className="min-w-0">

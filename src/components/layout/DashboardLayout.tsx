@@ -119,6 +119,7 @@ export function DashboardLayout({
           userName={currentUser.name ?? currentUser.email ?? "User"}
           userRole={currentUser.role}
           userCategory={currentUser.role}
+          avatarUrl={(currentUser as any).avatarUrl ?? null}
         />
 
         {/* MAIN CONTENT AREA */}

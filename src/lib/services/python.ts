@@ -15,3 +15,47 @@ export function buildPythonServiceUrl(path = "/"): string {
   url.pathname = `${url.pathname.replace(/\/$/, "")}${trimmed}`;
   return url.toString();
 }
+
+export async function getPythonStatus() {
+  const url = process.env.OCR_API_URL;
+  const apiKey = process.env.OCR_API_KEY;
+
+  if (!url || !apiKey) {
+    return {
+      connected: false,
+      message: "Set OCR_API_URL and OCR_API_KEY to enable Python service checks.",
+    };
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        image_url: "https://dummyimage.com/1x1/ffffff/000000&text=ping",
+      }),
+      // avoid caching a health response
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      return { connected: false, message: `HTTP ${res.status}` };
+    }
+
+    const data = await res.json().catch(() => null);
+    const text = typeof data?.text === "string" ? data.text : null;
+
+    return {
+      connected: true,
+      message: text ? "OCR online" : "OCR responded",
+    };
+  } catch (error) {
+    return {
+      connected: false,
+      message: error instanceof Error ? error.message : "Connection failed",
+    };
+  }
+}

@@ -5,10 +5,15 @@ import StorageStabilityAnalytics from "./StorageStabilityAnalytics";
 import BinderMetricsAnalytics from "./BinderMetricsAnalytics";
 import MaterialOptimizationAnalytics from "./MaterialOptimizationAnalytics";
 
-export default function AnalyticsTabs({ initialSets = [] }: { initialSets: any[] }) {
+type AnalyticsTabsProps = {
+  initialSets: any[];
+  initialTestSetId?: string | null;
+};
+
+export default function AnalyticsTabs({ initialSets = [], initialTestSetId }: AnalyticsTabsProps) {
   const [tab, setTab] = useState<"storage" | "metrics" | "optimization">("storage");
   const [testSets] = useState(initialSets);
-  const defaultSetId = testSets[0]?.id ?? null;
+  const defaultSetId = initialTestSetId ?? testSets[0]?.id ?? null;
 
   return (
     <div className="space-y-6">

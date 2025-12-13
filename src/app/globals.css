@@ -1,84 +1,123 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------
+   EcoTek Global Styles – High Contrast + Card Shadows + v4 Canonical Vars
+--------------------------------------------------------- */
+
 :root {
-  /* EcoTek brand tokens */
-  --color-bg-main: #f5f7fb;
-  --color-bg-alt: #f1f7f2;
-  --color-card-light: #ffffff;
-  --color-border-subtle: #d0ddd3;
+  /* EcoTek high-contrast brand tokens */
+  --color-bg-main: #e8eaef;             /* darker main background */
+  --color-bg-alt: #e3ece5;              /* alt background */
+  --color-card-light: #f9fafb;          /* soft grey cards */
+  --color-border-subtle: #b4c0b8;       /* stronger border */
 
-  --color-text-main: #3a393b;
-  --color-text-heading: #1a1a1a;
-  --color-text-muted: #7a7a7a;
-  --color-text-link: #0f75be;
+  --color-text-main: #2a2a2c;           /* higher contrast text */
+  --color-text-heading: #141414;
+  --color-text-muted: #616161;
+  --color-text-link: #0d5ca0;
 
-  --color-accent-primary: #2563eb;
-  --color-accent-recovery: #0ea5e9;
-  --color-accent-storability: #f97316;
-  --color-accent-jnr: #8b5cf6;
-  --color-accent-durability: #ef4444;
-  --color-accent-sustainability: #829f40;
-  --color-accent-cost: #dfd935;
+  --color-accent-primary: #1e4fb8;
+  --color-accent-recovery: #0b8ec9;
+  --color-accent-storability: #dc640e;
+  --color-accent-jnr: #7444d8;
+  --color-accent-durability: #cc1f1f;
+  --color-accent-sustainability: #6f8734;
+  --color-accent-cost: #c8c328;
 
-  --color-status-pass-bg: #dcfce7;
-  --color-status-pass-text: #15803d;
-  --color-status-fail-bg: #fee2e2;
-  --color-status-fail-text: #dc2626;
+  /* Status colors */
+  --color-status-pass-bg: #d1f9dd;
+  --color-status-pass-text: #116b31;
+  --color-status-fail-bg: #fbd5f5;
+  --color-status-fail-text: #b91c1c;
 
-  --shadow-sm: 0 10px 30px rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 15px 35px rgba(15, 23, 42, 0.12);
+  /* Subtle depth shadows */
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.12);
 
+  /* Semantic tokens */
   --background: var(--color-bg-main);
   --foreground: var(--color-text-heading);
+
   --card: var(--color-card-light);
   --card-foreground: var(--color-text-heading);
+
   --popover: var(--color-card-light);
   --popover-foreground: var(--color-text-heading);
+
   --primary: var(--color-accent-primary);
   --primary-foreground: #ffffff;
+
   --secondary: var(--color-bg-alt);
   --secondary-foreground: var(--color-text-heading);
+
   --muted: var(--color-bg-alt);
   --muted-foreground: var(--color-text-muted);
+
   --accent: var(--color-accent-primary);
   --accent-foreground: #ffffff;
+
   --destructive: #dc2626;
   --destructive-foreground: #fff5f5;
+
   --border: var(--color-border-subtle);
   --input: var(--color-border-subtle);
   --ring: var(--color-accent-primary);
+
   --radius: 1rem;
+
   --font-geist-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-geist-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
   --sidebar-offset: 20rem;
 }
 
+/* ---------------------------------------------------------
+   Tailwind Theme Inline Tokens
+--------------------------------------------------------- */
+
 @theme inline {
-  --font-sans: var(--font-geist-sans), "Inter", system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
   --radius-lg: calc(var(--radius) + 0.25rem);
   --radius-md: var(--radius);
   --radius-sm: calc(var(--radius) - 0.25rem);
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
 }
+
+/* ---------------------------------------------------------
+   Base Layer
+--------------------------------------------------------- */
 
 @layer base {
   * {
@@ -86,10 +125,23 @@
   }
 
   body {
-    @apply bg-[var(--color-bg-main)] text-[var(--color-text-main)];
+    @apply bg-(--color-bg-main) text-(--color-text-main);
     font-family: var(--font-geist-sans), "Inter", system-ui, sans-serif;
   }
+
+  /* Default card styling */
+  .card,
+  .dashboard-card,
+  .panel {
+    background-color: var(--color-card-light);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+  }
 }
+
+/* ---------------------------------------------------------
+   Layout Utilities
+--------------------------------------------------------- */
 
 .container-main {
   max-width: 72rem;
@@ -97,6 +149,7 @@
   padding: 0 1.5rem;
 }
 
+/* East Asian typography improvements */
 :lang(ko),
 :lang(ja),
 :lang(zh) {
