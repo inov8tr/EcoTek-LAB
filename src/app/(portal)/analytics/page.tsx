@@ -1,3 +1,6 @@
+export const runtime = "nodejs";
+
+import { dbApi } from "@/lib/dbApi";
 import { getStorageStabilityTrend, getRecoveryVsReagent, getEcoCapVsSofteningPoint, getPgImprovementByBitumenSource } from "@/lib/analytics/pma";
 import { StorageStabilityTrend } from "@/components/analytics/StorageStabilityTrend";
 import { RecoveryVsReagent } from "@/components/analytics/RecoveryVsReagent";
@@ -9,13 +12,16 @@ import Link from "next/link";
 import type { Route } from "next";
 import { Analytics } from "@/lib/analytics";
 
+type AnalyticsOverview = {
+  storageStabilityTrend: { label: string; value: number }[];
+  recoveryVsReagent: { reagent: number; recovery: number }[];
+  ecoCapVsSofteningPoint: { ecoCap: number; softeningPoint: number }[];
+  pgImprovement: { originId: string | null; formulaId: string; deltaHigh: number; deltaLow: number }[];
+};
+
 export default async function AnalyticsPage() {
-  const [stability, recovery, ecoCapSoftening, pgImprovement] = await Promise.all([
-    getStorageStabilityTrend(),
-    getRecoveryVsReagent(),
-    getEcoCapVsSofteningPoint(),
-    getPgImprovementByBitumenSource(),
-  ]);
+  const { storageStabilityTrend, recoveryVsReagent, ecoCapVsSofteningPoint, pgImprovement } =
+    await dbApi<AnalyticsOverview>("/analytics/overview");
   let pythonPgResult: { pg_high?: number; pg_low?: number; ok?: boolean } | null = null;
   try {
     pythonPgResult = await Analytics.computePgGrade({
@@ -45,14 +51,14 @@ export default async function AnalyticsPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <StorageStabilityTrend data={stability} />
-        <RecoveryVsReagent data={recovery} />
-        <EcoCapVsSofteningPoint data={ecoCapSoftening} />
+        <StorageStabilityTrend data={storageStabilityTrend} />
+        <RecoveryVsReagent data={recoveryVsReagent} />
+        <EcoCapVsSofteningPoint data={ecoCapVsSofteningPoint} />
         <PgScatterPlot
           data={pgImprovement.map((row) => ({
             pgHigh: row.deltaHigh,
             pgLow: row.deltaLow,
-            label: row.originId,
+            label: row.originId ?? undefined,
           }))}
         />
       </div>

@@ -1,7 +1,17 @@
+export const runtime = "nodejs";
+
 import AnalyticsTabs from "@/components/analytics/AnalyticsTabs";
 import TestSetInlineCreatorClient from "@/components/analytics/test-sets/InlineCreatorClient";
-import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { dbApi } from "@/lib/dbApi";
+
+type AnalysisSet = {
+  id: string;
+  name: string;
+  description: string | null;
+  ownerId: string | null;
+  createdAt: string;
+};
 
 export default async function BinderAnalyticsPage({
   searchParams,
@@ -14,14 +24,14 @@ export default async function BinderAnalyticsPage({
     const user = await getCurrentUser();
     if (!user) throw new Error("Unauthorized");
 
-    const where =
-      user.role === "ADMIN"
-        ? undefined
-        : {
-            OR: [{ ownerId: user.id }, { ownerId: null }],
-          };
-
-    sets = await prisma.analysisSet.findMany({ where, orderBy: { createdAt: "desc" } });
+    const query = new URLSearchParams();
+    if (user.role !== "ADMIN") {
+      query.set("owner_id", user.id);
+      query.set("is_admin", "false");
+    } else {
+      query.set("is_admin", "true");
+    }
+    sets = await dbApi<AnalysisSet[]>(`/analytics/binder?${query.toString()}`);
   } catch (err) {
     return (
       <div className="flex flex-col items-center justify-center space-y-4 p-10">

@@ -1,10 +1,26 @@
+export const runtime = "nodejs";
+
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { dbApi } from "@/lib/dbApi";
 import { DashboardCard } from "@/components/ui/dashboard-card";
 import type { Route } from "next";
 
 type PageProps = { params: Promise<{ id?: string }> };
+
+type CapsuleDetail = {
+  id: string;
+  name: string;
+  description: string | null;
+  materials: { id: string; materialName: string; percentage: number }[];
+  pmaFormulas: {
+    id: string;
+    name: string;
+    bitumenGradeOverride: string | null;
+    bitumenOrigin: { id: string; refineryName: string; binderGrade: string | null } | null;
+    bitumenTest: { id: string; batchCode: string | null } | null;
+  }[];
+};
 
 export default async function CapsuleDetailPage({ params }: PageProps) {
   const resolved = await params;
@@ -12,18 +28,7 @@ export default async function CapsuleDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const capsule = await prisma.capsuleFormula.findUnique({
-    where: { id: resolved.id },
-    include: {
-      materials: { orderBy: { createdAt: "asc" } },
-      pmaFormulas: {
-        include: {
-          bitumenOrigin: true,
-          bitumenTest: true,
-        },
-      },
-    },
-  });
+  const capsule = await dbApi<CapsuleDetail>(`/db/capsules/${resolved.id}`);
 
   if (!capsule) {
     notFound();

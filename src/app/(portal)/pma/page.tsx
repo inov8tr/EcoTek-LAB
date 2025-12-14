@@ -1,11 +1,24 @@
+export const runtime = "nodejs";
+
 import Link from "next/link";
 import type { Route } from "next";
-import { prisma } from "@/lib/prisma";
 import { DashboardCard } from "@/components/ui/dashboard-card";
 import { Button } from "@/components/ui/button";
 import { ViewModeGate } from "@/components/view-mode/view-mode-gate";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Filter } from "lucide-react";
+import { dbApi } from "@/lib/dbApi";
+
+type PmaFormula = {
+  id: string;
+  name: string;
+  bitumenGradeOverride: string | null;
+  notes: string | null;
+  capsuleFormula: { id: string; name: string } | null;
+  bitumenOrigin: { id: string; refineryName: string; binderGrade: string | null } | null;
+  bitumenTest: { id: string; batchCode: string | null } | null;
+  batchCount: number;
+};
 
 export default async function PmaListPage({
   searchParams,
@@ -14,15 +27,7 @@ export default async function PmaListPage({
 }) {
   const resolved = await searchParams;
   const q = resolved?.q?.toString().toLowerCase().trim() ?? "";
-  const formulas = await prisma.pmaFormula.findMany({
-    include: {
-      capsuleFormula: true,
-      bitumenOrigin: true,
-      bitumenTest: true,
-      batches: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const formulas = await dbApi<PmaFormula[]>("/db/pma-formulas");
   const filtered = q
     ? formulas.filter((pma) =>
         `${pma.name ?? ""} ${pma.bitumenGradeOverride ?? ""} ${pma.capsuleFormula?.name ?? ""} ${pma.bitumenOrigin?.refineryName ?? ""}`
@@ -98,7 +103,7 @@ export default async function PmaListPage({
               description={pma.notes || "No notes provided."}
               footer={
                 <div className="flex items-center justify-between text-xs">
-                  <span>{pma.batches.length} batches</span>
+                  <span>{pma.batchCount} batches</span>
                   <Link
                     href={`/pma/${pma.id}` as Route}
                     className="font-semibold text-[var(--color-text-link)]"

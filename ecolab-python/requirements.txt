@@ -7,3 +7,4 @@ scikit-learn
 pydantic
 python-multipart
 joblib
+psycopg[binary]

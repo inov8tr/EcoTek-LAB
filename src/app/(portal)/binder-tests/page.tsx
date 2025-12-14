@@ -1,16 +1,33 @@
+export const runtime = "nodejs";
+
 import Link from "next/link";
 import type { Route } from "next";
-import { BinderTestStatus, UserRole, Prisma } from "@prisma/client";
+import { BinderTestStatus, UserRole } from "@prisma/client";
 import { PlusCircle, FlaskConical, Filter, Download } from "lucide-react";
-import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { dbApi } from "@/lib/dbApi";
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-CA", { dateStyle: "medium" }).format(date);
 }
+
+type BinderTestRow = {
+  id: string;
+  name: string | null;
+  testName: string;
+  status: BinderTestStatus;
+  pgHigh: number | null;
+  pgLow: number | null;
+  batchId: string | null;
+  binderSource: string | null;
+  crmPct: number | null;
+  reagentPct: number | null;
+  aerosilPct: number | null;
+  createdAt: string;
+};
 
 type BinderTestsPageProps = {
   searchParams: Promise<{
@@ -29,24 +46,12 @@ export default async function BinderTestsPage({ searchParams }: BinderTestsPageP
     ? (statusParam as BinderTestStatus)
     : undefined;
 
-  const where = {
-    AND: [
-      q
-        ? {
-            name: {
-              contains: q,
-              mode: Prisma.QueryMode.insensitive,
-            },
-          }
-        : {},
-      statusFilter ? { status: statusFilter } : { status: { not: BinderTestStatus.ARCHIVED } },
-    ],
-  };
-
-  const tests = await prisma.binderTest.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-  });
+  const search = new URLSearchParams();
+  if (q) search.set("q", q);
+  if (statusFilter) search.set("status", statusFilter);
+  const tests = await dbApi<BinderTestRow[]>(
+    `/db/binder-tests${search.toString() ? `?${search.toString()}` : ""}`,
+  );
 
   const canCreate = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.RESEARCHER;
 
@@ -187,7 +192,7 @@ export default async function BinderTestsPage({ searchParams }: BinderTestsPageP
                     <td className="py-2 px-4">
                       <Badge variant="secondary">{test.status}</Badge>
                     </td>
-                    <td className="py-2 px-4 text-xs text-muted-foreground">{formatDate(test.createdAt)}</td>
+                    <td className="py-2 px-4 text-xs text-muted-foreground">{formatDate(new Date(test.createdAt))}</td>
                   </tr>
                 ))}
               </tbody>

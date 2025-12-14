@@ -12,6 +12,8 @@ import { getDashboardData } from "@/lib/data-service";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { getPythonStatus } from "@/lib/services/python";
 
+export const runtime = "nodejs";
+
 export default async function DashboardPage() {
   const [dbStatus, pythonStatus] = await Promise.all([
     getDatabaseStatus(),

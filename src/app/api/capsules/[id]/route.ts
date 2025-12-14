@@ -1,8 +1,11 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { guardApiUser } from "@/lib/api/auth";
 import { UserRole } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { dbApi } from "@/lib/dbApi";
 
 const percentageSchema = z.preprocess(
   (val) => {
@@ -84,43 +87,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
     }
 
-    const existing = await prisma.capsuleFormula.findUnique({ where: { id } });
-    if (!existing) {
-      return NextResponse.json({ error: "Capsule formula not found" }, { status: 404 });
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
-      const updated = await tx.capsuleFormula.update({
-        where: { id },
-        data: {
-          name: data.name ?? existing.name,
-          description:
-            data.description !== undefined ? data.description : existing.description,
-        },
-      });
-
-      if (data.materials) {
-        await tx.capsuleFormulaMaterial.deleteMany({
-          where: { capsuleFormulaId: id },
-        });
-        await tx.capsuleFormulaMaterial.createMany({
-          data: data.materials.map((item) => ({
-            capsuleFormulaId: id,
-            materialName: item.materialName,
-            percentage: item.percentage,
-          })),
-        });
-      }
-
-      return updated;
+    const updated = await dbApi(`/db/capsules/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        name: data.name,
+        description: data.description,
+        materials: data.materials,
+      }),
     });
 
-    const formula = await prisma.capsuleFormula.findUnique({
-      where: { id },
-      include: { materials: { orderBy: { createdAt: "asc" } } },
-    });
-
-    return NextResponse.json(formula ?? result);
+    return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.flatten() }, { status: 400 });

@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+
 export async function GET() {
-  const { DB_API_URL, X_API_KEY } = process.env;
-  if (!DB_API_URL || !X_API_KEY) {
+  const { DB_API_URL, DB_API_KEY } = process.env;
+  if (!DB_API_URL || !DB_API_KEY) {
     return NextResponse.json(
-      { error: "DB_API_URL or X_API_KEY is not configured" },
+      { error: "DB_API_URL or DB_API_KEY is not configured" },
       { status: 500 },
     );
   }
 
-  const res = await fetch(`${DB_API_URL}/test`, {
-    headers: { "x-api-key": X_API_KEY },
+  const res = await fetch(`${DB_API_URL}/db/test`, {
+    headers: { "x-api-key": DB_API_KEY },
   });
 
   if (!res.ok) {

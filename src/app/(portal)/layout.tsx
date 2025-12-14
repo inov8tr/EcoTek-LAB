@@ -8,6 +8,7 @@ import { NotificationsStream } from "./notifications/stream";
 import type { NotificationPreview } from "@/types/notifications";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export default async function PortalLayout({
   children,

@@ -1,6 +1,7 @@
+export const runtime = "nodejs";
+
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { prisma } from "@/lib/prisma";
 import type { BinderTestExtractedData } from "@/lib/binder/types";
 import { Analytics } from "@/lib/analytics";
 import {
@@ -13,12 +14,55 @@ import {
   isSofteningPointPass,
   isViscosityPass,
 } from "@/lib/analytics/binder-spec";
+import { dbApi } from "@/lib/dbApi";
 
-function formatDateTime(date: Date) {
+type LinkedTestResult = {
+  storageStabilityRecoveryPercent: number | null;
+  storageStabilityGstarPercent: number | null;
+  storageStabilityJnrPercent: number | null;
+  deltaSoftening: number | null;
+  softeningPoint: number | null;
+  viscosity135: number | null;
+  ductility15: number | null;
+  ductility25: number | null;
+  recovery: number | null;
+  pgHigh: number | null;
+  pgLow: number | null;
+};
+
+type BinderTestDetail = {
+  id: string;
+  name: string | null;
+  testName: string;
+  status: string;
+  pgHigh: number | null;
+  pgLow: number | null;
+  batchId: string | null;
+  binderSource: string | null;
+  crmPct: number | null;
+  reagentPct: number | null;
+  aerosilPct: number | null;
+  aiExtractedData: Record<string, unknown> | null;
+  dsrData: Record<string, number> | null;
+  lab: string | null;
+  operator: string | null;
+  jnr_3_2: number | null;
+  recoveryPct: number | null;
+  softeningPointC: number | null;
+  viscosity155_cP: number | null;
+  ductilityCm: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  linkedTestResult: LinkedTestResult | null;
+};
+
+function formatDateTime(date: string | Date) {
+  const d = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat("en-CA", {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(date);
+  }).format(d);
 }
 
 type FieldRow = { label: string; value: string | number | null | undefined };
@@ -26,24 +70,16 @@ type FieldRow = { label: string; value: string | number | null | undefined };
 export default async function BinderTestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const test = await prisma.binderTest.findUnique({
-    where: { id },
-  });
-
-  if (!test) {
+  let test: BinderTestDetail | null = null;
+  try {
+    test = await dbApi<BinderTestDetail>(`/db/binder-tests/${id}`);
+  } catch {
     return notFound();
   }
 
   const extracted: Partial<BinderTestExtractedData> = (test.aiExtractedData as any)?.data ?? {};
   const dsrData = (test.dsrData as Record<string, number> | null) ?? null;
-  const batchIdInt = Number(test.batchId);
-  const linkedTestResult =
-    Number.isFinite(batchIdInt) && Number.isInteger(batchIdInt)
-      ? await prisma.testResult.findFirst({
-          where: { batchId: batchIdInt },
-          orderBy: { createdAt: "desc" },
-        })
-      : null;
+  const linkedTestResult = test.linkedTestResult;
 
   const computedPgHigh = await computePgFromPython({
     currentPgHigh: extracted.pgHigh ?? test.pgHigh,

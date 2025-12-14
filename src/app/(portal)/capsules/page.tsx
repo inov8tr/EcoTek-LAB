@@ -1,18 +1,22 @@
+export const runtime = "nodejs";
+
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { dbApi } from "@/lib/dbApi";
 import { DashboardCard } from "@/components/ui/dashboard-card";
 import { Button } from "@/components/ui/button";
 import { ViewModeGate } from "@/components/view-mode/view-mode-gate";
 import type { Route } from "next";
 
+type CapsuleFormula = {
+  id: string;
+  name: string;
+  description: string | null;
+  materials: { id: string; materialName: string; percentage: number }[];
+  pmaCount: number;
+};
+
 export default async function CapsulesPage() {
-  const capsules = await prisma.capsuleFormula.findMany({
-    include: {
-      materials: { orderBy: { createdAt: "asc" } },
-      pmaFormulas: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const capsules = await dbApi<CapsuleFormula[]>("/db/capsules");
 
   return (
     <div className="space-y-6">
@@ -70,7 +74,7 @@ export default async function CapsulesPage() {
                   <tr key={`table-${capsule.id}`} className="border-b border-neutral-100">
                     <td className="px-4 py-3 text-neutral-900">{capsule.name}</td>
                     <td className="px-4 py-3 text-neutral-700">{capsule.materials.length}</td>
-                    <td className="px-4 py-3 text-neutral-700">{capsule.pmaFormulas.length}</td>
+                    <td className="px-4 py-3 text-neutral-700">{capsule.pmaCount}</td>
                     <td className="px-4 py-3 text-right">
                       <Button asChild variant="ghost" size="sm">
                         <Link href={`/capsules/${capsule.id}` as Route}>Open</Link>

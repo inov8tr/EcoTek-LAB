@@ -1,8 +1,11 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { guardApiUser } from "@/lib/api/auth";
 import { UserRole } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { dbApi } from "@/lib/dbApi";
 
 const percentageSchema = z.preprocess(
   (val) => {
@@ -68,19 +71,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: totalError }, { status: 400 });
     }
 
-    const created = await prisma.capsuleFormula.create({
-      data: {
+    const created = await dbApi("/db/capsules", {
+      method: "POST",
+      body: JSON.stringify({
         name: data.name,
         description: data.description ?? null,
         createdById: user.id,
-        materials: {
-          create: data.materials.map((item) => ({
-            materialName: item.materialName,
-            percentage: item.percentage,
-          })),
-        },
-      },
-      include: { materials: true },
+        materials: data.materials,
+      }),
     });
 
     return NextResponse.json(created, { status: 201 });
