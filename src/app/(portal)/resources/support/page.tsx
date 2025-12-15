@@ -1,6 +1,8 @@
+export const runtime = "nodejs";
+
 import { requireStatus } from "@/lib/auth-helpers";
 import { UserStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { dbQuery } from "@/lib/db-proxy";
 import { submitSupportRequest } from "./actions";
 
 export default async function SupportPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
@@ -9,11 +11,22 @@ export default async function SupportPage({ searchParams }: { searchParams?: Pro
   const success = typeof params?.success === "string" ? params.success : null;
   const error = typeof params?.error === "string" ? params.error : null;
 
-  const recent = await prisma.supportRequest.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    take: 5,
-  });
+  const recent = await dbQuery<{
+    id: string;
+    subject: string;
+    status: string;
+    message: string;
+    createdAt: string;
+  }>(
+    [
+      'SELECT "id", "subject", "status", "message", "createdAt"',
+      'FROM "SupportRequest"',
+      'WHERE "userId" = $1',
+      'ORDER BY "createdAt" DESC',
+      "LIMIT 5",
+    ].join(" "),
+    [user.id],
+  );
 
   return (
     <div className="space-y-6">

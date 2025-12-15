@@ -27,6 +27,25 @@ async function requireActiveUser() {
   return user;
 }
 
+async function logSecurityEvent(options: {
+  userId: string;
+  eventType: string;
+  detail?: string | null;
+  category?: string | null;
+  channel?: string | null;
+  link?: string | null;
+}) {
+  const id = randomUUID();
+  const { userId, eventType, detail = null, category = null, channel = null, link = null } = options;
+  await dbQuery(
+    [
+      'INSERT INTO "SecurityEvent" ("id", "userId", "eventType", "detail", "category", "channel", "link")',
+      "VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    ].join(" "),
+    [id, userId, eventType, detail, category, channel, link],
+  );
+}
+
 export async function updateProfile(formData: FormData) {
   const user = await requireActiveUser();
   const avatarFile = formData.get("avatarFile");
@@ -50,31 +69,42 @@ export async function updateProfile(formData: FormData) {
   const notificationPushOptIn = formData.get("notificationPushOptIn") === "on";
   const notificationInAppOptIn = formData.get("notificationInAppOptIn") === "on";
 
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  let idx = 1;
+
+  const add = (clause: string, value: unknown) => {
+    sets.push(clause.replace("?", `$${idx}`));
+    params.push(value);
+    idx += 1;
+  };
+
+  if (displayName !== undefined) add('"displayName" = ?', displayName);
+  if (avatarUrl !== undefined) add('"avatarUrl" = ?', avatarUrl);
+  if (bannerUrl !== undefined) add('"bannerUrl" = ?', bannerUrl);
+  if (handle !== undefined) add('"handle" = ?', handle);
+  if (bio !== undefined) add('"bio" = ?', bio);
+  if (locale) add('"locale" = ?', locale);
+  if (timeZone) add('"timeZone" = ?', timeZone);
+  if (theme) add('"theme" = ?', theme);
+  add('"notificationEmailOptIn" = ?', notificationEmailOptIn);
+  add('"notificationPushOptIn" = ?', notificationPushOptIn);
+  add('"notificationInAppOptIn" = ?', notificationInAppOptIn);
+  sets.push('"updatedAt" = now()');
+
+  params.push(user.id);
+
   await dbQuery(
-    [
-      'UPDATE "User" SET "displayName" = $1, "avatarUrl" = $2, "bannerUrl" = $3, "handle" = $4, "bio" = $5,',
-      '"locale" = $6, "timeZone" = $7, "theme" = $8, "notificationEmailOptIn" = $9,',
-      '"notificationPushOptIn" = $10, "notificationInAppOptIn" = $11, "updatedAt" = now() WHERE "id" = $12',
-    ].join(" "),
-    [
-      displayName,
-      avatarUrl,
-      bannerUrl,
-      handle,
-      bio,
-      locale,
-      timeZone,
-      theme,
-      notificationEmailOptIn,
-      notificationPushOptIn,
-      notificationInAppOptIn,
-      user.id,
-    ],
+    `UPDATE "User" SET ${sets.join(", ")} WHERE "id" = $${idx}`,
+    params,
   );
-  await dbQuery(
-    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category", "channel") VALUES ($1, $2, $3, $4, $5)',
-    [user.id, "PROFILE_UPDATED", "Profile or preferences updated", "account", "in-app"],
-  );
+  await logSecurityEvent({
+    userId: user.id,
+    eventType: "PROFILE_UPDATED",
+    detail: "Profile or preferences updated",
+    category: "account",
+    channel: "in-app",
+  });
   revalidatePath("/settings");
   redirectWithMessage("Profile updated");
 }
@@ -104,10 +134,12 @@ export async function changePassword(formData: FormData) {
     passwordHash,
     user.id,
   ]);
-  await dbQuery(
-    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
-    [user.id, "PASSWORD_CHANGED", "Password updated", "security"],
-  );
+  await logSecurityEvent({
+    userId: user.id,
+    eventType: "PASSWORD_CHANGED",
+    detail: "Password updated",
+    category: "security",
+  });
   revalidatePath("/settings");
   redirectWithMessage("Password updated");
 }
@@ -116,10 +148,12 @@ export async function toggleLoginAlerts(formData: FormData) {
   const user = await requireActiveUser();
   const enabled = formData.get("loginAlerts") === "on";
   await dbQuery('UPDATE "User" SET "loginAlerts" = $1, "updatedAt" = now() WHERE "id" = $2', [enabled, user.id]);
-  await dbQuery(
-    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
-    [user.id, "LOGIN_ALERTS", enabled ? "Login alerts enabled" : "Login alerts disabled", "account"],
-  );
+  await logSecurityEvent({
+    userId: user.id,
+    eventType: "LOGIN_ALERTS",
+    detail: enabled ? "Login alerts enabled" : "Login alerts disabled",
+    category: "account",
+  });
   revalidatePath("/settings");
   redirectWithMessage("Login alerts updated");
 }
@@ -131,10 +165,12 @@ export async function generateTwoFactor() {
     'UPDATE "User" SET "twoFactorSecret" = $1, "twoFactorEnabled" = false, "updatedAt" = now() WHERE "id" = $2',
     [secret, user.id],
   );
-  await dbQuery(
-    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
-    [user.id, "2FA_SECRET", "2FA secret generated", "security"],
-  );
+  await logSecurityEvent({
+    userId: user.id,
+    eventType: "2FA_SECRET",
+    detail: "2FA secret generated",
+    category: "security",
+  });
   revalidatePath("/settings");
   redirectWithMessage("2FA secret generated. Scan the new code.");
 }
@@ -154,10 +190,12 @@ export async function verifyTwoFactor(formData: FormData) {
     redirectWithMessage("Invalid 2FA code", "error");
   }
   await dbQuery('UPDATE "User" SET "twoFactorEnabled" = true, "updatedAt" = now() WHERE "id" = $1', [user.id]);
-  await dbQuery(
-    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
-    [user.id, "2FA_ENABLED", "2FA enabled", "security"],
-  );
+  await logSecurityEvent({
+    userId: user.id,
+    eventType: "2FA_ENABLED",
+    detail: "2FA enabled",
+    category: "security",
+  });
   await regenerateRecoveryCodes();
   revalidatePath("/settings");
   redirectWithMessage("2FA enabled");
@@ -169,10 +207,12 @@ export async function disableTwoFactor() {
     'UPDATE "User" SET "twoFactorEnabled" = false, "twoFactorSecret" = NULL, "updatedAt" = now() WHERE "id" = $1',
     [user.id],
   );
-  await dbQuery(
-    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
-    [user.id, "2FA_DISABLED", "2FA disabled", "security"],
-  );
+  await logSecurityEvent({
+    userId: user.id,
+    eventType: "2FA_DISABLED",
+    detail: "2FA disabled",
+    category: "security",
+  });
   revalidatePath("/settings");
   redirectWithMessage("2FA disabled");
 }
@@ -185,10 +225,12 @@ export async function revokeSession(formData: FormData) {
     sessionToken,
     user.id,
   ]);
-  await dbQuery(
-    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
-    [user.id, "SESSION_REVOKED", `Session revoked ${sessionToken}`, "security"],
-  );
+  await logSecurityEvent({
+    userId: user.id,
+    eventType: "SESSION_REVOKED",
+    detail: `Session revoked ${sessionToken}`,
+    category: "security",
+  });
   revalidatePath("/settings");
   redirectWithMessage("Session revoked");
 }
@@ -196,50 +238,60 @@ export async function revokeSession(formData: FormData) {
 export async function revokeAllSessions() {
   const user = await requireActiveUser();
   await dbQuery('UPDATE "Session" SET "revoked" = true, "revokedAt" = now() WHERE "userId" = $1', [user.id]);
-  await dbQuery(
-    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
-    [user.id, "SESSIONS_REVOKED", "All sessions revoked", "security"],
-  );
+  await logSecurityEvent({
+    userId: user.id,
+    eventType: "SESSIONS_REVOKED",
+    detail: "All sessions revoked",
+    category: "security",
+  });
   revalidatePath("/settings");
   redirectWithMessage("All sessions revoked");
 }
 
 export async function regenerateRecoveryCodes() {
   const user = await requireActiveUser();
-  const codes = Array.from({ length: 10 }, () => randomUUID().slice(0, 8).toUpperCase());
+  const codes = Array.from({ length: 10 }, () => ({ id: randomUUID(), code: randomUUID().slice(0, 8).toUpperCase() }));
   await dbQuery('DELETE FROM "RecoveryCode" WHERE "userId" = $1', [user.id]);
   const params: unknown[] = [];
   const values = codes
     .map((code, idx) => {
-      const userParam = idx * 2 + 1;
-      const codeParam = idx * 2 + 2;
-      params.push(user.id, code);
-      return `($${userParam}, $${codeParam})`;
+      const idParam = idx * 3 + 1;
+      const userParam = idx * 3 + 2;
+      const codeParam = idx * 3 + 3;
+      params.push(code.id, user.id, code.code);
+      return `($${idParam}, $${userParam}, $${codeParam})`;
     })
     .join(", ");
   if (values) {
-    await dbQuery(`INSERT INTO "RecoveryCode" ("userId", "code") VALUES ${values}`, params);
+    await dbQuery(`INSERT INTO "RecoveryCode" ("id", "userId", "code") VALUES ${values}`, params);
   }
-  await dbQuery(
-    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
-    [user.id, "2FA_RECOVERY_REGEN", "Recovery codes regenerated", "security"],
-  );
+  await logSecurityEvent({
+    userId: user.id,
+    eventType: "2FA_RECOVERY_REGEN",
+    detail: "Recovery codes regenerated",
+    category: "security",
+  });
   revalidatePath("/settings");
   redirectWithMessage("Recovery codes regenerated");
 }
 
 export async function generateVerificationLink() {
   const user = await requireActiveUser();
+  const id = randomUUID();
   const token = randomUUID();
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
   await dbQuery(
-    'INSERT INTO "EmailVerificationToken" ("token", "userId", "expiresAt") VALUES ($1, $2, $3)',
-    [token, user.id, expiresAt.toISOString()],
+    'INSERT INTO "EmailVerificationToken" ("id", "token", "userId", "expiresAt") VALUES ($1, $2, $3, $4)',
+    [id, token, user.id, expiresAt.toISOString()],
   );
-  await dbQuery(
-    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category", "channel", "link") VALUES ($1, $2, $3, $4, $5, $6)',
-    [user.id, "EMAIL_VERIFY_LINK", "Verification link generated", "account", "email", `/verify-email?token=${token}`],
-  );
+  await logSecurityEvent({
+    userId: user.id,
+    eventType: "EMAIL_VERIFY_LINK",
+    detail: "Verification link generated",
+    category: "account",
+    channel: "email",
+    link: `/verify-email?token=${token}`,
+  });
   const baseUrl = process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL ?? "";
   if (isEmailEnabled() && baseUrl) {
     const verifyUrl = `${baseUrl.replace(/\/$/, "")}/verify-email?token=${token}`;
@@ -263,15 +315,12 @@ export async function updateNotificationPrefs(formData: FormData) {
     'UPDATE "User" SET "notificationEmailOptIn" = $1, "notificationPushOptIn" = $2, "notificationInAppOptIn" = $3, "updatedAt" = now() WHERE "id" = $4',
     [email, push, inApp, user.id],
   );
-  await dbQuery(
-    'INSERT INTO "SecurityEvent" ("userId", "eventType", "detail", "category") VALUES ($1, $2, $3, $4)',
-    [
-      user.id,
-      "NOTIFICATION_PREFS",
-      `Prefs updated (email:${email ? "on" : "off"}, push:${push ? "on" : "off"}, in-app:${inApp ? "on" : "off"})`,
-      "account",
-    ],
-  );
+  await logSecurityEvent({
+    userId: user.id,
+    eventType: "NOTIFICATION_PREFS",
+    detail: `Prefs updated (email:${email ? "on" : "off"}, push:${push ? "on" : "off"}, in-app:${inApp ? "on" : "off"})`,
+    category: "account",
+  });
   revalidatePath("/settings");
   redirectWithMessage("Notification preferences updated");
 }

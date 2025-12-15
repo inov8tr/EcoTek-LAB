@@ -2,15 +2,18 @@ import { redirect } from "next/navigation";
 import { UserRole } from "@prisma/client";
 import { BinderTestForm } from "@/components/binder/BinderTestForm";
 import { requireRole } from "@/lib/auth-helpers";
-import { prisma } from "@/lib/prisma";
+import { dbApi } from "@/lib/dbApi";
 
 export default async function NewBinderTestPage() {
   await requireRole([UserRole.ADMIN, UserRole.RESEARCHER]);
-  const pmaOptions = await prisma.pmaFormula.findMany({
-    select: { id: true, name: true, bitumenGradeOverride: true, capsuleFormula: { select: { name: true } } },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  const pmaOptions = await dbApi<
+    {
+      id: string;
+      name: string | null;
+      bitumenGradeOverride: string | null;
+      capsuleFormula: { name: string | null } | null;
+    }[]
+  >("/db/pma-formulas");
 
   return (
     <div className="max-w-3xl space-y-6">

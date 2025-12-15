@@ -17,7 +17,11 @@ export async function dbApi<T>(path: string, options: RequestInit = {}): Promise
   });
 
   if (!res.ok) {
-    throw new Error(`DB API error ${res.status}`);
+    const text = await res.text().catch(() => "");
+    const message = text || `DB API error ${res.status}`;
+    const err: any = new Error(message);
+    err.status = res.status;
+    throw err;
   }
 
   return res.json();

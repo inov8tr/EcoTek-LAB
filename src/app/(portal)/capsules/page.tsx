@@ -17,6 +17,11 @@ type CapsuleFormula = {
 
 export default async function CapsulesPage() {
   const capsules = await dbApi<CapsuleFormula[]>("/db/capsules");
+  const safeCapsules = capsules.map((capsule) => ({
+    ...capsule,
+    materials: capsule.materials ?? [],
+    pmaCount: capsule.pmaCount ?? 0,
+  }));
 
   return (
     <div className="space-y-6">
@@ -48,7 +53,7 @@ export default async function CapsulesPage() {
         <div className="border-b border-border/60 px-4 py-3">
           <h2 className="text-sm font-semibold text-[var(--color-text-heading)]">All formulas</h2>
         </div>
-        {capsules.length === 0 ? (
+        {safeCapsules.length === 0 ? (
           <div className="p-4 text-sm text-[var(--color-text-muted)]">
             No capsules created yet. Use the button above to add a new formula.
           </div>
@@ -70,7 +75,7 @@ export default async function CapsulesPage() {
                 </tr>
               </thead>
               <tbody>
-                {capsules.map((capsule) => (
+                {safeCapsules.map((capsule) => (
                   <tr key={`table-${capsule.id}`} className="border-b border-neutral-100">
                     <td className="px-4 py-3 text-neutral-900">{capsule.name}</td>
                     <td className="px-4 py-3 text-neutral-700">{capsule.materials.length}</td>
@@ -89,7 +94,7 @@ export default async function CapsulesPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {capsules.map((capsule) => (
+        {safeCapsules.map((capsule) => (
           <DashboardCard
             key={capsule.id}
             title={capsule.name}

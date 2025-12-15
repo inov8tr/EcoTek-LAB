@@ -8,9 +8,9 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { LineTrendChart } from "@/components/charts/line-trend-chart";
 import { gatewayTimeline, spotlightTasks } from "@/lib/data";
 import { getDatabaseStatus } from "@/lib/db";
-import { getDashboardData } from "@/lib/data-service";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { getPythonStatus } from "@/lib/services/python";
+import { getDashboardData } from "@/lib/dashboard-data";
 
 export const runtime = "nodejs";
 
@@ -24,29 +24,26 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-10">
-      <section className="rounded-md border border-brand-primary/30 bg-brand-primary/5 p-6 shadow-sm">
+      <section className="hero-panel rounded-2xl p-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.6em] text-[var(--color-text-muted)]">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.45em] text-[var(--color-text-muted)]">
               EcoTek Control Center
             </p>
-            <h1 className="mt-3 text-3xl font-semibold leading-tight text-[var(--color-text-heading)] md:text-4xl">
+            <h1 className="text-4xl font-semibold leading-tight text-[var(--color-text-heading)] md:text-5xl">
               Eco API Gateway
             </h1>
-            <p className="mt-2 max-w-2xl text-[var(--color-text-main)]">
-              Monitor live sync health, approve formulation changes, and keep every analytics
-              workload aligned with sustainability targets.
+            <p className="max-w-2xl text-base text-[var(--color-text-main)]">
+              Live view of data pipelines, runtime health, and recent batches. Everything runs through the Python API—no direct DB access.
             </p>
-          </div>
-          <div className="flex flex-wrap gap-3 text-sm font-medium text-[var(--color-text-heading)]">
-            <span className="rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-emerald-700">
-              Real-time Sync On
-            </span>
-            <span className="rounded-full border border-border px-4 py-2">
-              6 Active Pipelines
-            </span>
-            <StatusPill label="PostgreSQL" healthy={dbStatus.connected} />
-            <StatusPill label="Python OCR" healthy={pythonStatus.connected} />
+            <div className="flex flex-wrap gap-3 text-sm font-medium text-[var(--color-text-heading)]">
+              <span className="pill bg-white/80 text-[var(--color-text-heading)]">Live sync</span>
+              <span className="pill border-dashed border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/10 text-[var(--color-text-heading)]">
+                No direct DB connections
+              </span>
+              <StatusPill label="PostgreSQL" healthy={dbStatus.connected} />
+              <StatusPill label="Python API" healthy={pythonStatus.connected} />
+            </div>
           </div>
         </div>
       </section>

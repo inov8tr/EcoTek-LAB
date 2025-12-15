@@ -1,127 +1,39 @@
-import path from "path";
-import fs from "fs";
-import { NextRequest, NextResponse } from "next/server";
-import { Prisma, UserRole } from "@prisma/client";
-import { getCurrentUser } from "@/lib/auth-helpers";
-import { prisma } from "@/lib/prisma";
-import mime from "mime-types";
-import { ensureBinderFolders, saveBinderTestFile, BINDER_BASE_PATH } from "@/lib/binder/storage";
-import { runHybridExtractionForBinderTest } from "@/lib/binder/hybridExtraction";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { guardApiUser } from "@/lib/api/auth";
+import { UserRole } from "@prisma/client";
+import { dbQuery } from "@/lib/db-proxy";
 
-export const runtime = "nodejs";
+const payloadSchema = z.object({
+  url: z.string().url(),
+  fileName: z.string().optional(),
+  mimeType: z.string().optional(),
+  size: z.number().optional(),
+});
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+type RouteParams = { params: Promise<{ id: string }> };
+
+export async function POST(req: Request, { params }: RouteParams) {
   const { id } = await params;
-  const user = await getCurrentUser();
-  if (!user || (user.role !== UserRole.ADMIN && user.role !== UserRole.RESEARCHER)) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
+  const authResult = await guardApiUser({ roles: [UserRole.ADMIN, UserRole.RESEARCHER], requireActive: true });
+  if ("response" in authResult) return authResult.response;
 
   try {
-    const binderTest = await prisma.binderTest.findUnique({ where: { id } });
-    if (!binderTest) return new NextResponse("Not found", { status: 404 });
-
-    const formData = await req.formData();
-    const files = (formData.getAll("files") as File[]).filter((f) => f && f.size > 0);
-    if (!files.length) return new NextResponse("No files provided", { status: 400 });
-
-    const baseName = binderTest.testName || binderTest.name || "binder-test";
-    const folderName =
-      binderTest.folderName && binderTest.folderName !== "legacy-binder-test"
-        ? binderTest.folderName
-        : `${binderTest.id}-${baseName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "binder-test"}`;
-
-    // Ensure base path exists (create if missing) and folders
-    fs.mkdirSync(BINDER_BASE_PATH, { recursive: true });
-    ensureBinderFolders(folderName);
-
-    const originals = (binderTest.originalFiles as any) ?? { pdf: null, photos: [], videos: [] };
-    const docRows: {
-      originalName: string;
-      storedPath: string;
-      mimeType: string | null;
-      sizeBytes: number | null;
-    }[] = [];
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const ext = path.extname(file.name) || ".bin";
-      const target = `${Date.now()}-${i}${ext}`;
-      const savedPath = await saveBinderTestFile(folderName, file, target);
-
-      const mimeLower = (file.type || "").toLowerCase();
-      docRows.push({
-        originalName: file.name,
-        storedPath: savedPath,
-        mimeType: mimeLower || (mime.lookup(savedPath) as string | null) || null,
-        sizeBytes: file.size,
-      });
-      if (mimeLower.includes("pdf")) {
-        if (!originals.pdf) originals.pdf = savedPath;
-        else originals.photos.push(savedPath); // store additional PDFs as photos list for reference
-      } else if (mimeLower.startsWith("image/")) {
-        originals.photos.push(savedPath);
-      } else if (mimeLower.startsWith("video/")) {
-        originals.videos.push(savedPath);
-      } else {
-        originals.photos.push(savedPath);
-      }
-    }
-
-    // Re-run hybrid extraction
-    const folderPath = path.join(BINDER_BASE_PATH, folderName);
-    const extraction = await runHybridExtractionForBinderTest(folderPath);
-
-    const metadataDir = path.join(folderPath, "metadata");
-    fs.mkdirSync(metadataDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(metadataDir, "parsed_deterministic.json"),
-      JSON.stringify(extraction.data, null, 2)
+    const body = payloadSchema.parse(await req.json());
+    const label = body.fileName ?? body.url.split("/").pop() ?? "attachment";
+    await dbQuery(
+      [
+        'INSERT INTO "BinderTestDataFile" ("id", "binderTestId", "fileUrl", "fileType", "label", "createdAt")',
+        "VALUES (gen_random_uuid()::text, $1, $2, $3, $4, NOW())",
+      ].join(" "),
+      [id, body.url, body.mimeType ?? null, label],
     );
-    if (extraction.usedAi) {
-      const aiDir = path.join(folderPath, "ai");
-      fs.mkdirSync(aiDir, { recursive: true });
-      fs.writeFileSync(path.join(aiDir, "ai_extraction.json"), JSON.stringify(extraction.data, null, 2));
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.binderTest.update({
-        where: { id },
-        data: {
-          folderName,
-          originalFiles: originals,
-          pgHigh: extraction.data.pgHigh,
-          pgLow: extraction.data.pgLow,
-          softeningPointC: extraction.data.softeningPointC,
-          viscosity155_cP: extraction.data.viscosity155_cP,
-          ductilityCm: extraction.data.ductilityCm,
-          recoveryPct: extraction.data.recoveryPct,
-          jnr_3_2: extraction.data.jnr_3_2,
-          dsrData: extraction.data.dsrData as Prisma.InputJsonValue,
-          aiExtractedData: extraction.usedAi
-            ? ({ data: extraction.data, sources: extraction.sources } as unknown as Prisma.InputJsonValue)
-            : Prisma.DbNull,
-          status: "PENDING_REVIEW",
-        },
-      });
-
-      if (docRows.length) {
-        await tx.binderTestDocument.createMany({
-          data: docRows.map((d) => ({
-            binderTestId: binderTest.id,
-            originalName: d.originalName,
-            storedPath: d.storedPath,
-            mimeType: d.mimeType,
-            sizeBytes: d.sizeBytes ?? undefined,
-          })),
-        });
-      }
-    });
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ ok: true });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : "Failed to append files";
-    console.error("Append files failed", msg);
-    return new NextResponse(msg, { status: 500 });
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.flatten() }, { status: 400 });
+    }
+    console.error(`POST /api/binder-tests/${id}/files`, error);
+    return NextResponse.json({ error: "Unable to record binder test file" }, { status: 500 });
   }
 }

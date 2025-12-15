@@ -1,13 +1,21 @@
+export const runtime = "nodejs";
+
 import { UserRole } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
 import { TableBrowser } from "@/components/admin/database/TableBrowser";
+import { dbQuery } from "@/lib/db-proxy";
 
 export default async function AdminDatabasePage() {
   await requireRole([UserRole.ADMIN]);
 
-  const tables =
-    await prisma.$queryRaw<{ table_name: string }[]>`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`;
+  const tables = await dbQuery<{ table_name: string }>(
+    [
+      "SELECT table_name",
+      "FROM information_schema.tables",
+      "WHERE table_schema = 'public'",
+      "ORDER BY table_name",
+    ].join(" "),
+  );
 
   return (
     <div className="space-y-6">

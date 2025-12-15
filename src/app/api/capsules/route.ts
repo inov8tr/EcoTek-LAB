@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { guardApiUser } from "@/lib/api/auth";
 import { UserRole } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { dbApi } from "@/lib/dbApi";
 
 const percentageSchema = z.preprocess(
@@ -43,17 +42,13 @@ export async function GET() {
   });
   if ("response" in authResult) return authResult.response;
 
-  const formulas = await prisma.capsuleFormula.findMany({
-    include: {
-      materials: {
-        orderBy: { createdAt: "asc" },
-      },
-      pmaFormulas: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return NextResponse.json(formulas);
+  try {
+    const formulas = await dbApi("/db/capsules");
+    return NextResponse.json(formulas);
+  } catch (error) {
+    console.error("GET /api/capsules", error);
+    return NextResponse.json({ error: "Failed to load capsules" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {

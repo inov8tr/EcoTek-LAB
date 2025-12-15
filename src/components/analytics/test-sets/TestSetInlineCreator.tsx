@@ -15,6 +15,11 @@ export default function TestSetInlineCreator({ onCreated }: { onCreated?: (id: s
     async function load() {
       try {
         const res = await fetch("/api/binder-tests/list", { method: "GET" });
+        if (!res.ok) {
+          setError(`Failed to load binder tests (${res.status})`);
+          setTests([]);
+          return;
+        }
         const json = await res.json();
         setTests(json.data ?? []);
       } finally {

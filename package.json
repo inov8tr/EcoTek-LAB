@@ -11,7 +11,9 @@
     "hash-password": "node scripts/hash-password.mjs",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "db:types": "pg-to-ts generate -c \"$DATABASE_URL\" -o src/types/db.ts",
+    "schema:smoke": "tsx scripts/schema-smoke.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "2.10.0",
@@ -55,6 +57,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.0.6",
+    "pg-to-ts": "^3.7.1",
     "prisma": "^5.19.1",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",

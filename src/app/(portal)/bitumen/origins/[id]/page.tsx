@@ -1,16 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { prisma } from "@/lib/prisma";
 import { DashboardCard } from "@/components/ui/dashboard-card";
+import { dbQuery } from "@/lib/db-proxy";
 
-type PageProps = { params: { id: string } };
+type PageProps = { params: Promise<{ id: string }> };
 
 export default async function BitumenOriginDetail({ params }: PageProps) {
-  const origin = await prisma.bitumenOrigin.findUnique({
-    where: { id: params.id },
-    include: { baseTests: { orderBy: { createdAt: "desc" } }, pmaFormulas: true },
-  });
+  const { id } = await params;
+  const origin = await fetchOrigin(id);
 
   if (!origin) {
     notFound();
@@ -71,4 +69,52 @@ export default async function BitumenOriginDetail({ params }: PageProps) {
       </DashboardCard>
     </div>
   );
+}
+
+type BitumenOriginDetail = {
+  id: string;
+  refineryName: string;
+  binderGrade: string | null;
+  originCountry: string | null;
+  description: string | null;
+  baseTests: {
+    id: string;
+    batchCode: string | null;
+    softeningPoint: number | null;
+    basePgHigh: number | null;
+    basePgLow: number | null;
+    createdAt: string;
+  }[];
+  pmaFormulas: { id: string; name: string | null; bitumenGradeOverride: string | null }[];
+};
+
+async function fetchOrigin(id: string): Promise<BitumenOriginDetail | null> {
+  const [origin] = await dbQuery<{
+    id: string;
+    refineryName: string;
+    binderGrade: string | null;
+    originCountry: string | null;
+    description: string | null;
+  }>('SELECT "id", "refineryName", "binderGrade", "originCountry", "description" FROM "BitumenOrigin" WHERE "id" = $1 LIMIT 1', [
+    id,
+  ]);
+
+  if (!origin) return null;
+
+  const baseTests = await dbQuery<BitumenOriginDetail["baseTests"][number]>(
+    [
+      'SELECT "id", "batchCode", "softeningPoint", "basePgHigh", "basePgLow", "createdAt"',
+      'FROM "BitumenBaseTest"',
+      'WHERE "bitumenOriginId" = $1',
+      'ORDER BY "createdAt" DESC',
+    ].join(" "),
+    [id],
+  );
+
+  const pmaFormulas = await dbQuery<BitumenOriginDetail["pmaFormulas"][number]>(
+    'SELECT "id", "name", "bitumenGradeOverride" FROM "PmaFormula" WHERE "bitumenOriginId" = $1',
+    [id],
+  );
+
+  return { ...origin, baseTests, pmaFormulas };
 }

@@ -11,7 +11,10 @@ export async function GET(req: NextRequest) {
   const filePath = url.searchParams.get("path");
   if (!filePath) return new NextResponse("Missing path", { status: 400 });
 
-  const normalized = path.normalize(filePath);
+  const resolved = path.isAbsolute(filePath)
+    ? filePath
+    : path.join(BINDER_BASE_PATH, filePath.replace(/^\/+/, ""));
+  const normalized = path.normalize(resolved);
   if (!normalized.startsWith(BINDER_BASE_PATH)) {
     return new NextResponse("Invalid path", { status: 400 });
   }

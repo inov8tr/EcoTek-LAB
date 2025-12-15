@@ -34,13 +34,19 @@ export default async function CapsuleDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const safeCapsule = {
+    ...capsule,
+    materials: capsule.materials ?? [],
+    pmaFormulas: capsule.pmaFormulas ?? [],
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-[var(--color-text-heading)]">{capsule.name}</h1>
+          <h1 className="text-3xl font-bold text-[var(--color-text-heading)]">{safeCapsule.name}</h1>
           <p className="text-[var(--color-text-muted)]">
-            {capsule.description ?? "No description provided."}
+            {safeCapsule.description ?? "No description provided."}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -61,7 +67,7 @@ export default async function CapsuleDetailPage({ params }: PageProps) {
 
       <DashboardCard title="Materials" description="Totals must equal 100%.">
         <ul className="space-y-2 text-sm text-[var(--color-text-main)]">
-          {capsule.materials.map((m) => (
+          {safeCapsule.materials.map((m) => (
             <li key={m.id} className="flex items-center justify-between rounded-lg border border-border-subtle px-3 py-2 bg-white/70">
               <span>{m.materialName}</span>
               <span className="font-semibold">{m.percentage}%</span>
@@ -71,11 +77,11 @@ export default async function CapsuleDetailPage({ params }: PageProps) {
       </DashboardCard>
 
       <DashboardCard title="Linked PMA Formulas">
-        {capsule.pmaFormulas.length === 0 ? (
+        {safeCapsule.pmaFormulas.length === 0 ? (
           <p className="text-sm text-[var(--color-text-muted)]">No PMA formulas yet.</p>
         ) : (
           <ul className="space-y-2 text-sm text-[var(--color-text-main)]">
-            {capsule.pmaFormulas.map((pma) => (
+            {safeCapsule.pmaFormulas.map((pma) => (
               <li
                 key={pma.id}
                 className="flex flex-col gap-1 rounded-lg border border-border-subtle bg-white/70 px-3 py-2"

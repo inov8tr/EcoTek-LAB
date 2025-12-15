@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { guardApiUser } from "@/lib/api/auth";
 import { UserRole } from "@prisma/client";
 import { pmaBatchBody } from "@/lib/api/validators";
+import { dbQuery } from "@/lib/db-proxy";
+import { randomUUID } from "crypto";
+import { dbApi } from "@/lib/dbApi";
 
 export async function GET(req: Request) {
   const authResult = await guardApiUser({ roles: [UserRole.ADMIN, UserRole.RESEARCHER], requireActive: true });
@@ -12,11 +14,25 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const pmaId = searchParams.get("pmaFormulaId");
 
-  const batches = await prisma.pmaBatch.findMany({
-    where: pmaId ? { pmaFormulaId: pmaId } : undefined,
-    include: { testResults: true, pmaFormula: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const batches = await dbQuery<{
+    id: string;
+    pmaFormulaId: string;
+    batchCode: string | null;
+    sampleDate: string | null;
+    notes: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>(
+    [
+      'SELECT "id", "pmaFormulaId", "batchCode", "sampleDate", "notes", "createdAt", "updatedAt"',
+      'FROM "PmaBatch"',
+      pmaId ? 'WHERE "pmaFormulaId" = $1' : "",
+      'ORDER BY "createdAt" DESC',
+    ]
+      .filter(Boolean)
+      .join(" "),
+    pmaId ? [pmaId] : [],
+  );
 
   return NextResponse.json(batches);
 }
@@ -28,21 +44,29 @@ export async function POST(req: Request) {
 
   try {
     const data = pmaBatchBody.parse(await req.json());
-    const created = await prisma.pmaBatch.create({
-      data: {
-        pmaFormulaId: data.pmaFormulaId,
-        batchCode: data.batchCode,
-        sampleDate: data.sampleDate ? new Date(data.sampleDate) : null,
-        notes: data.notes ?? null,
-        testedById: user.id,
+    const id = randomUUID();
+    const res = await dbApi(
+      "/db/query",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          query: [
+            'INSERT INTO "PmaBatch" ("id", "pmaFormulaId", "batchCode", "sampleDate", "notes", "testedById", "createdAt", "updatedAt")',
+            "VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())",
+            'RETURNING "id", "pmaFormulaId", "batchCode", "sampleDate", "notes", "testedById", "createdAt", "updatedAt"',
+          ].join(" "),
+          params: [id, data.pmaFormulaId, data.batchCode, data.sampleDate ?? null, data.notes ?? null, user.id],
+        }),
       },
-    });
+    );
+    const created = (res as any).rows?.[0] ?? null;
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
+    console.error("POST /api/pma/batches", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.flatten() }, { status: 400 });
     }
-    console.error("POST /api/pma/batches", error);
-    return NextResponse.json({ error: "Unable to create PMA batch" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unable to create PMA batch";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

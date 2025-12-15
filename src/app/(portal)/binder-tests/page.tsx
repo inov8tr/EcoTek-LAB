@@ -2,204 +2,79 @@ export const runtime = "nodejs";
 
 import Link from "next/link";
 import type { Route } from "next";
-import { BinderTestStatus, UserRole } from "@prisma/client";
-import { PlusCircle, FlaskConical, Filter, Download } from "lucide-react";
-import { requireRole } from "@/lib/auth-helpers";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
+import { notFound } from "next/navigation";
 import { dbApi } from "@/lib/dbApi";
+import { DashboardCard } from "@/components/ui/dashboard-card";
+import { Button } from "@/components/ui/button";
+import { ViewModeGate } from "@/components/view-mode/view-mode-gate";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CreateBinderTestModal } from "@/components/binder/CreateBinderTestModal";
 
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en-CA", { dateStyle: "medium" }).format(date);
-}
-
-type BinderTestRow = {
+type BinderTestListItem = {
   id: string;
-  name: string | null;
-  testName: string;
-  status: BinderTestStatus;
-  pgHigh: number | null;
-  pgLow: number | null;
-  batchId: string | null;
-  binderSource: string | null;
-  crmPct: number | null;
-  reagentPct: number | null;
-  aerosilPct: number | null;
-  createdAt: string;
+  pmaTestBatchCode?: string | null;
+  status: string;
+  updatedAt: string;
 };
 
-type BinderTestsPageProps = {
-  searchParams: Promise<{
-    q?: string | string[];
-    status?: string | string[];
-  }>;
-};
-
-export default async function BinderTestsPage({ searchParams }: BinderTestsPageProps) {
-  const currentUser = await requireRole([UserRole.ADMIN, UserRole.RESEARCHER]);
-  const params = await searchParams;
-  const qParam = params?.q;
-  const q = Array.isArray(qParam) ? qParam[0] ?? "" : qParam ?? "";
-  const statusParam = Array.isArray(params?.status) ? params?.status[0] : params?.status;
-  const statusFilter = statusParam && Object.values(BinderTestStatus).includes(statusParam as BinderTestStatus)
-    ? (statusParam as BinderTestStatus)
-    : undefined;
-
-  const search = new URLSearchParams();
-  if (q) search.set("q", q);
-  if (statusFilter) search.set("status", statusFilter);
-  const tests = await dbApi<BinderTestRow[]>(
-    `/db/binder-tests${search.toString() ? `?${search.toString()}` : ""}`,
-  );
-
-  const canCreate = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.RESEARCHER;
+export default async function BinderTestsPage() {
+  const tests = await loadTests();
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Binder Test Data</h1>
-          <p className="text-sm text-muted-foreground">View and manage binder test runs, reports, photos, and videos.</p>
+          <h1 className="text-3xl font-bold text-[var(--color-text-heading)]">Binder Tests</h1>
+          <p className="text-[var(--color-text-muted)]">Manage binder evaluations and evidence.</p>
         </div>
-        {canCreate && (
-          <Link href={"/binder-tests/new" as Route}>
-            <Button
-              variant="secondary"
-              className="rounded-full border-brand-primary text-brand-primary hover:bg-brand-primary/5"
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              New Binder Test
-            </Button>
-          </Link>
-        )}
+        <ViewModeGate minRole="RESEARCHER">
+          <CreateBinderTestModal />
+        </ViewModeGate>
       </div>
 
-      <div className="rounded-xl border bg-card p-4">
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <form className="flex flex-wrap items-center gap-3" method="get">
-            <div className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <input
-                type="search"
-                name="q"
-                placeholder="Search name"
-                defaultValue={q}
-                autoComplete="off"
-                className="w-48 text-sm outline-none"
-              />
-            </div>
-            <select
-              name="status"
-              defaultValue={statusFilter ?? ""}
-              className="rounded-lg border px-3 py-2 text-sm"
+      {tests.length === 0 ? (
+        <EmptyState
+          title="No binder tests yet"
+          description="Create a binder test to start uploading evidence and parsing metrics."
+          actions={
+            <ViewModeGate minRole="RESEARCHER">
+              <CreateBinderTestModal compact />
+            </ViewModeGate>
+          }
+        />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {tests.map((test) => (
+            <DashboardCard
+              key={test.id}
+              title={`Binder Test ${test.id.slice(0, 8)}`}
+              description={test.binderFormulation || "No formulation provided."}
+              footer={
+                <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)]">
+                  <span>{test.status}</span>
+                  <Link href={`/binder-tests/${test.id}` as Route} className="font-semibold text-[var(--color-text-link)]">
+                    Open
+                  </Link>
+                </div>
+              }
             >
-              <option value="">All statuses</option>
-              {Object.values(BinderTestStatus).map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            <Button type="submit" variant="secondary" size="sm">
-              Apply
-            </Button>
-            {(q || statusFilter) && (
-              <Link href={"/binder-tests" as Route} className="text-sm text-muted-foreground hover:text-primary">
-                Clear
-              </Link>
-            )}
-          </form>
-          <div className="ml-auto flex items-center gap-2">
-            <Link href={"/api/binder-tests/export" as Route}>
-              <Button variant="ghost" size="sm">
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
-              </Button>
-            </Link>
-            <Link href={"/binder-tests/archived" as Route}>
-              <Button variant="secondary" size="sm" className="rounded-full border-brand-primary text-brand-primary hover:bg-brand-primary/5">
-                Archived
-              </Button>
-            </Link>
-          </div>
+              <p className="text-sm text-[var(--color-text-main)]">
+                PMA Batch: {test.pmaTestBatchCode ?? "N/A"}
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)]">Updated: {new Date(test.updatedAt).toLocaleString()}</p>
+            </DashboardCard>
+          ))}
         </div>
-        {tests.length === 0 ? (
-          <EmptyState
-            icon={<FlaskConical className="h-6 w-6" />}
-            title="No binder tests yet"
-            description="Create your first binder test to start tracking results, documents, and extractions."
-            actions={
-              canCreate && (
-                <Link href={"/binder-tests/new" as Route}>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="rounded-full border-brand-primary text-brand-primary hover:bg-brand-primary/5"
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    New Binder Test
-                  </Button>
-                </Link>
-              )
-            }
-          />
-        ) : (
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="min-w-full text-sm">
-              <thead className="sticky top-0 bg-card">
-                <tr className="border-b text-xs text-muted-foreground">
-                  <th className="py-2 pr-4 text-left">Test Name</th>
-                  <th className="py-2 px-4 text-left">Batch</th>
-                  <th className="py-2 px-4 text-left">Binder Source</th>
-                  <th className="py-2 px-4 text-left">CRM / Reagent / Aerosil</th>
-                  <th className="py-2 px-4 text-left">Status</th>
-                  <th className="py-2 px-4 text-left">Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tests.map((test) => (
-                  <tr key={test.id} className="border-b last:border-0 hover:bg-muted/40">
-                    <td className="py-2 pr-4">
-                      <div className="flex flex-col">
-                        <Link
-                          href={`/binder-tests/${test.id}/review` as Route}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {test.name || test.testName || "Untitled Binder Test"}
-                        </Link>
-                        <Link
-                          href={`/binder-tests/${test.id}` as Route}
-                          className="text-xs text-muted-foreground hover:underline"
-                        >
-                          View data
-                        </Link>
-                        <Link
-                          href={`/binder-tests/${test.id}/documents` as Route}
-                          className="text-xs text-muted-foreground hover:underline"
-                        >
-                          Documents
-                        </Link>
-                      </div>
-                    </td>
-                    <td className="py-2 px-4">{test.batchId ?? "-"}</td>
-                    <td className="py-2 px-4">{test.binderSource ?? "-"}</td>
-                    <td className="py-2 px-4">
-                      <span className="text-xs text-muted-foreground">
-                        CRM: {test.crmPct ?? "-"}% · Reagent: {test.reagentPct ?? "-"}% · Aerosil: {test.aerosilPct ?? "-"}%
-                      </span>
-                    </td>
-                    <td className="py-2 px-4">
-                      <Badge variant="secondary">{test.status}</Badge>
-                    </td>
-                    <td className="py-2 px-4 text-xs text-muted-foreground">{formatDate(new Date(test.createdAt))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
+}
+
+async function loadTests(): Promise<BinderTestListItem[]> {
+  try {
+    return await dbApi<BinderTestListItem[]>("/db/binder-tests");
+  } catch (err) {
+    console.error("Failed to load binder tests", err);
+    return [];
+  }
 }

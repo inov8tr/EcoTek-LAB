@@ -33,6 +33,7 @@ export function PmaBatchForm({
   initialData,
 }: PmaBatchFormProps) {
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<BatchPayload>({
     pmaFormulaId,
     batchCode: initialData?.batchCode ?? "",
@@ -71,8 +72,11 @@ export function PmaBatchForm({
     e.preventDefault();
     if (!onSubmit || !canSubmit) return;
     setSaving(true);
+    setError(null);
     try {
       await onSubmit(form);
+    } catch (err: any) {
+      setError(err?.message || "Unable to save batch");
     } finally {
       setSaving(false);
     }
@@ -164,9 +168,14 @@ export function PmaBatchForm({
       </DashboardCard>
 
       <div className="flex flex-wrap gap-3">
-        <Button type="submit" disabled={!canSubmit || saving} className="rounded-full px-6 py-2">
+        <Button
+          type="submit"
+          disabled={!canSubmit || saving}
+          className="rounded-full px-6 py-2 bg-[var(--color-accent-primary)] text-white hover:bg-[var(--color-accent-primary)]/90 focus-visible:ring-[var(--color-accent-primary)]"
+        >
           {saving ? "Saving..." : submitLabel}
         </Button>
+        {error && <p className="text-sm font-semibold text-[var(--color-status-fail-text)]">{error}</p>}
         {storageWarning && (
           <p className="text-sm text-red-600">
             Storage stability must be between 0 and 100%.

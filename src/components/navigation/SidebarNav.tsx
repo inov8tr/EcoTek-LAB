@@ -29,7 +29,7 @@ export function SidebarNav({ currentUser }: { currentUser: CurrentUser }) {
     >
       <div className="flex items-center justify-between px-3 py-4">
         {!collapsed && (
-          <span className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-heading)]">
+          <span className="text-sm font-semibold uppercase tracking-wide text-(--color-text-heading)">
             Navigation
           </span>
         )}
@@ -48,7 +48,7 @@ export function SidebarNav({ currentUser }: { currentUser: CurrentUser }) {
         {navSections.map((section, idx) => (
           <div key={section.label ?? `section-${idx}`} className="space-y-1">
             {!collapsed && section.label && (
-              <p className="px-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+              <p className="px-3 text-xs font-semibold uppercase tracking-wide text-(--color-text-muted)">
                 {section.label}
               </p>
             )}
@@ -64,8 +64,8 @@ export function SidebarNav({ currentUser }: { currentUser: CurrentUser }) {
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     active
-                      ? "bg-[var(--color-accent-sustainability)]/20 text-[var(--color-text-heading)] shadow-sm"
-                      : "text-[var(--color-text-main)] hover:bg-gray-100"
+                      ? "bg-(--color-accent-sustainability)/20 text-(--color-text-heading) shadow-sm"
+                      : "text-(--color-text-main) hover:bg-gray-100"
                   )}
                 >
                   <Icon size={20} className="shrink-0" />

@@ -1,12 +1,15 @@
+export const runtime = "nodejs";
+
 import Image from "next/image";
 import { cookies } from "next/headers";
 import { UserRole, UserStatus } from "@prisma/client";
 import { authenticator } from "otplib";
 import { getDatabaseStatus } from "@/lib/db";
 import { requireStatus, getCurrentUser } from "@/lib/auth-helpers";
-import { prisma } from "@/lib/prisma";
 import { describeUserAgent, describeLocation, formatDateTime } from "@/lib/utils";
 import { lookupGeo } from "@/lib/geo";
+import { dbQuery } from "@/lib/db-proxy";
+import { AvatarUploader } from "@/components/settings/avatar-uploader";
 import {
   updateProfile,
   changePassword,
@@ -61,53 +64,101 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     cookieStore.get("__Secure-authjs.session-token")?.value ??
     cookieStore.get("authjs.session-token")?.value ??
     null;
-  const fullUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      displayName: true,
-      avatarUrl: true,
-      bannerUrl: true,
-      handle: true,
-      pronouns: true,
-      bio: true,
-      locale: true,
-      timeZone: true,
-      theme: true,
-      loginAlerts: true,
-      twoFactorEnabled: true,
-      twoFactorSecret: true,
-      emailVerified: true,
-      notificationEmailOptIn: true,
-      notificationPushOptIn: true,
-      notificationInAppOptIn: true,
-    },
-  });
-  const sessions = await prisma.session.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-  });
+  const [fullUser] = await dbQuery<{
+    id: string;
+    name: string | null;
+    email: string | null;
+    displayName: string | null;
+    avatarUrl: string | null;
+    bannerUrl: string | null;
+    handle: string | null;
+    pronouns: string | null;
+    bio: string | null;
+    locale: string | null;
+    timeZone: string | null;
+    theme: string | null;
+    loginAlerts: boolean | null;
+    twoFactorEnabled: boolean | null;
+    twoFactorSecret: string | null;
+    emailVerified: Date | string | null;
+    notificationEmailOptIn: boolean | null;
+    notificationPushOptIn: boolean | null;
+    notificationInAppOptIn: boolean | null;
+  }>(
+    [
+      'SELECT "id", "name", "email", "displayName", "avatarUrl", "bannerUrl", "handle", "pronouns", "bio", "locale", "timeZone", "theme",',
+      ' "loginAlerts", "twoFactorEnabled", "twoFactorSecret", "emailVerified",',
+      ' "notificationEmailOptIn", "notificationPushOptIn", "notificationInAppOptIn"',
+      'FROM "User"',
+      'WHERE "id" = $1',
+      "LIMIT 1",
+    ].join(" "),
+    [user.id],
+  );
+  const sessions = await dbQuery<{
+    id: string;
+    createdAt: string;
+    ipAddress: string | null;
+    userAgent: string | null;
+  }>(
+    [
+      'SELECT "id", "createdAt", "ipAddress", "userAgent"',
+      'FROM "Session"',
+      'WHERE "userId" = $1',
+      'ORDER BY "createdAt" DESC',
+    ].join(" "),
+    [user.id],
+  );
   const sessionGeo = await Promise.all(
     sessions.map(async (s) => ({
       id: s.id,
       geo: await lookupGeo(s.ipAddress),
     }))
   );
-  const recoveryCodes = await prisma.recoveryCode.findMany({
-    where: { userId: user.id, used: false },
-    orderBy: { createdAt: "desc" },
-  });
-  const securityEvents = await prisma.securityEvent.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-  });
-  const latestVerifyToken = await prisma.emailVerificationToken.findFirst({
-    where: { userId: user.id, used: false, expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: "desc" },
-  });
+  const recoveryCodes = await dbQuery<{
+    id: string;
+    code: string;
+    createdAt: string;
+  }>(
+    [
+      'SELECT "id", "code", "createdAt"',
+      'FROM "RecoveryCode"',
+      'WHERE "userId" = $1 AND "used" = false',
+      'ORDER BY "createdAt" DESC',
+    ].join(" "),
+    [user.id],
+  );
+  const securityEvents = await dbQuery<{
+    id: string;
+    eventType: string;
+    detail: string | null;
+    category: string | null;
+    createdAt: string;
+  }>(
+    [
+      'SELECT "id", "eventType", "detail", "category", "createdAt"',
+      'FROM "SecurityEvent"',
+      'WHERE "userId" = $1',
+      'ORDER BY "createdAt" DESC',
+      "LIMIT 10",
+    ].join(" "),
+    [user.id],
+  );
+  const [latestVerifyToken] = await dbQuery<{
+    id: string;
+    token: string;
+    createdAt: string;
+    expiresAt: string;
+  }>(
+    [
+      'SELECT "id", "token", "createdAt", "expiresAt"',
+      'FROM "EmailVerificationToken"',
+      'WHERE "userId" = $1 AND "used" = false AND "expiresAt" > NOW()',
+      'ORDER BY "createdAt" DESC',
+      "LIMIT 1",
+    ].join(" "),
+    [user.id],
+  );
   const otpauthUrl =
     fullUser?.twoFactorSecret && fullUser.email
       ? authenticator.keyuri(fullUser.email, "EcoTek", fullUser.twoFactorSecret)
@@ -162,62 +213,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   { value: "dark", label: "Dark" },
                 ]}
               />
-              <div className="space-y-3 text-sm text-[var(--color-text-heading)] sm:col-span-2">
-                <span className="font-medium">Profile picture</span>
-                <div className="flex flex-wrap items-start gap-4">
-                  <label className="inline-flex cursor-pointer items-center justify-center rounded-md border border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100 focus-within:ring-2 focus-within:ring-brand-primary/30">
-                    <input
-                      type="file"
-                      name="avatarFile"
-                      accept="image/*"
-                      className="sr-only"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          const img = document.getElementById("avatar-preview") as HTMLImageElement | null;
-                          const label = document.getElementById("avatar-placeholder");
-                          if (img && typeof reader.result === "string") {
-                            img.src = reader.result;
-                            img.classList.remove("hidden");
-                          }
-                          label?.classList.add("hidden");
-                        };
-                        reader.readAsDataURL(file);
-                      }}
-                    />
-                    <span>Select image</span>
-                  </label>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-neutral-100 text-xs text-neutral-500">
-                      {fullUser?.avatarUrl ? (
-                        <Image
-                          src={fullUser.avatarUrl}
-                          alt="Current avatar"
-                          width={96}
-                          height={96}
-                          className="h-full w-full object-cover"
-                          id="avatar-preview"
-                        />
-                      ) : (
-                        <>
-                          <Image
-                            src="/placeholder-avatar.png"
-                            alt="New avatar preview"
-                            id="avatar-preview"
-                            width={96}
-                            height={96}
-                            className="hidden h-full w-full object-cover"
-                          />
-                          <span id="avatar-placeholder">No photo</span>
-                        </>
-                      )}
-                    </div>
-                    <p className="text-xs text-[var(--color-text-muted)]">Upload a square JPG or PNG under 2 MB.</p>
-                  </div>
-                </div>
-              </div>
+              <AvatarUploader currentAvatarUrl={fullUser?.avatarUrl ?? null} />
             </div>
             <div>
               <label className="text-sm font-medium text-[var(--color-text-heading)]">Bio</label>

@@ -1,20 +1,38 @@
+export const runtime = "nodejs";
+
 import { UserStatus } from "@prisma/client";
 import { requireStatus } from "@/lib/auth-helpers";
-import { prisma } from "@/lib/prisma";
+import { dbQuery } from "@/lib/db-proxy";
 import { formatDateTime } from "@/lib/utils";
 import { publishNotification } from "@/lib/realtime";
 import { NotificationFilterFeed } from "./filter-feed";
 import { SnoozeToggle } from "./snooze";
 import { markAllNotificationsRead, markNotificationRead } from "./actions";
 
+type SecurityEventRow = {
+  id: string;
+  eventType: string;
+  detail: string | null;
+  category: string | null;
+  createdAt: string;
+  readAt: string | null;
+  userAgent: string | null;
+  ipAddress: string | null;
+};
+
 export default async function NotificationsPage() {
   const user = await requireStatus(UserStatus.ACTIVE);
 
-  const events = await prisma.securityEvent.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    take: 25,
-  });
+  const events = await dbQuery<SecurityEventRow>(
+    [
+      'SELECT "id", "eventType", "detail", "category", "createdAt", "readAt", "userAgent", "ipAddress"',
+      'FROM "SecurityEvent"',
+      'WHERE "userId" = $1',
+      'ORDER BY "createdAt" DESC',
+      "LIMIT 25",
+    ].join(" "),
+    [user.id],
+  );
   // broadcast latest unread count for connected clients
   if (events.length) {
     await publishNotification(user.id, {
@@ -31,7 +49,7 @@ export default async function NotificationsPage() {
     eventType: e.eventType,
     detail: e.detail,
     category: e.category,
-    createdAt: e.createdAt,
+    createdAt: new Date(e.createdAt),
   }));
 
   return (
@@ -131,7 +149,7 @@ function NotificationCard({
   title: string;
   description: string;
   empty: string;
-  items: Awaited<ReturnType<typeof prisma.securityEvent.findMany>>;
+  items: SecurityEventRow[];
   locale: string;
   timeZone: string;
   showActions?: boolean;

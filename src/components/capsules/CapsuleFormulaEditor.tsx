@@ -45,6 +45,7 @@ export function CapsuleFormulaEditor({
     }))
   );
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const roundedTotal = useMemo(() => {
     const total = materials.reduce((acc, row) => acc + (parseFloat(row.percentage) || 0), 0);
@@ -76,16 +77,30 @@ export function CapsuleFormulaEditor({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (percentError || !onSubmit) return;
+    if (!onSubmit) return;
+    if (percentError) {
+      setError("Total percentage must equal 100%.");
+      return;
+    }
+    const cleaned = materials
+      .map((row) => ({
+        materialName: row.materialName.trim(),
+        percentage: parseFloat(row.percentage) || 0,
+      }))
+      .filter((row) => row.materialName.length > 0);
+
+    if (cleaned.length === 0) {
+      setError("Add at least one material with a name.");
+      return;
+    }
+
+    setError(null);
     setSaving(true);
     try {
       await onSubmit({
         name,
         description,
-        materials: materials.map((row) => ({
-          materialName: row.materialName.trim(),
-          percentage: parseFloat(row.percentage) || 0,
-        })),
+        materials: cleaned,
       });
     } finally {
       setSaving(false);
@@ -214,6 +229,11 @@ export function CapsuleFormulaEditor({
         {percentError && (
           <p className="text-sm font-semibold text-red-600">
             Total percentage must equal 100%.
+          </p>
+        )}
+        {error && !percentError && (
+          <p className="text-sm font-semibold text-red-600">
+            {error}
           </p>
         )}
       </div>

@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import type { Route } from "next";
-import { Prisma, UserRole } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
 import TableViewer from "@/components/admin/database/TableViewer";
 import { Button } from "@/components/ui/button";
+import { dbQuery } from "@/lib/db-proxy";
 
 type PageProps = {
   params: Promise<{ table: string }>;
@@ -21,16 +21,24 @@ export default async function TablePage({ params, searchParams }: PageProps) {
   const resolvedSearch = (await searchParams) ?? {};
 
   const tableParam = decodeURIComponent(resolvedParams.table);
-  const tables =
-    await prisma.$queryRaw<{ table_name: string }[]>`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`;
+  const tables = await dbQuery<{ table_name: string }>(
+    "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'",
+  );
   const tableNames = new Set(tables.map((t) => t.table_name));
 
   if (!tableNames.has(tableParam)) {
     notFound();
   }
 
-  const columns =
-    await prisma.$queryRaw<{ column_name: string }[]>`SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = ${tableParam} ORDER BY ordinal_position`;
+  const columns = await dbQuery<{ column_name: string }>(
+    [
+      'SELECT column_name',
+      "FROM information_schema.columns",
+      "WHERE table_schema = 'public' AND table_name = $1",
+      "ORDER BY ordinal_position",
+    ].join(" "),
+    [tableParam],
+  );
 
   if (!columns.length) {
     notFound();
@@ -52,15 +60,14 @@ export default async function TablePage({ params, searchParams }: PageProps) {
   const sortDirection = dirParam === "desc" ? "desc" : "asc";
   const sort = { id: validSort, desc: sortDirection === "desc" };
 
-  const tableIdentifier = Prisma.raw(`"${tableParam}"`);
-  const orderByClause = Prisma.sql`ORDER BY ${Prisma.raw(`"${validSort}" ${sortDirection.toUpperCase()}`)}`;
-
-  const rows = await prisma.$queryRaw(
-    Prisma.sql`SELECT * FROM ${tableIdentifier} ${orderByClause} LIMIT ${PAGE_SIZE} OFFSET ${offset}`
+  const orderBy = `"${validSort}" ${sortDirection.toUpperCase()}`;
+  const rows = await dbQuery(
+    `SELECT * FROM "${tableParam}" ORDER BY ${orderBy} LIMIT $1 OFFSET $2`,
+    [PAGE_SIZE, offset],
   );
 
-  const countResult = await prisma.$queryRaw<{ count: bigint }[]>(
-    Prisma.sql`SELECT COUNT(*)::bigint as count FROM ${tableIdentifier}`
+  const countResult = await dbQuery<{ count: string }>(
+    `SELECT COUNT(*)::text as count FROM "${tableParam}"`,
   );
   const total = Number(countResult[0]?.count ?? 0);
 

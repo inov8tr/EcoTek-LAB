@@ -1,8 +1,9 @@
 import { unstable_cache } from "next/cache";
 import { RequirementComparison, UserStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import { getPrimaryStandard } from "@/lib/standards";
+import { dbQuery } from "@/lib/db-proxy";
+import { prisma } from "@/lib/prisma";
 
 type PassFail = "pass" | "fail";
 
@@ -214,34 +215,52 @@ function addSeriesPoint(
 export const getDashboardData = withStaticCache("dashboard-data", async () => {
   const [lookup, tests, batches, pendingUsers] = await Promise.all([
     getRequirementLookup(),
-    prisma.testResult.findMany({
-      where: {
-        batch: {
-          archived: false,
-          formulation: {
-            archived: false,
-          },
-        },
-      },
-      orderBy: { createdAt: "asc" },
-      include: {
-        batch: {
-          include: { formulation: true },
-        },
-      },
-    }),
-    prisma.batch.findMany({
-      where: {
-        archived: false,
-        formulation: {
-          archived: false,
-        },
-      },
-      orderBy: { dateMixed: "desc" },
-      take: 6,
-      include: { formulation: true },
-    }),
-    prisma.user.count({ where: { status: UserStatus.PENDING } }),
+    dbQuery<{
+      id: number;
+      storabilityPct: number | null;
+      solubilityPct: number | null;
+      elasticRecoveryPct: number | null;
+      softeningPointC: number | null;
+      viscosityPaS: number | null;
+      jnr: number | null;
+      createdAt: string;
+      batchCode: string;
+      formulationCode: string;
+      formulationSlug: string;
+    }>(
+      [
+        'SELECT tr."id", tr."storabilityPct", tr."solubilityPct", tr."elasticRecoveryPct", tr."softeningPointC",',
+        'tr."viscosityPaS", tr."jnr", tr."createdAt",',
+        'b."batchCode" AS "batchCode", f."code" AS "formulationCode", f."slug" AS "formulationSlug"',
+        'FROM "TestResult" tr',
+        'JOIN "Batch" b ON tr."batchId" = b."id"',
+        'JOIN "Formulation" f ON b."formulationId" = f."id"',
+        'WHERE b."archived" = false AND f."archived" = false',
+        'ORDER BY tr."createdAt" ASC',
+      ].join(" "),
+    ),
+    dbQuery<{
+      id: string;
+      batchCode: string;
+      dateMixed: string | null;
+      status: string | null;
+      formulationCode: string;
+      formulationSlug: string;
+    }>(
+      [
+        'SELECT b."id", b."batchCode", b."dateMixed", b."status",',
+        'f."code" AS "formulationCode", f."slug" AS "formulationSlug"',
+        'FROM "Batch" b',
+        'JOIN "Formulation" f ON b."formulationId" = f."id"',
+        'WHERE b."archived" = false AND f."archived" = false',
+        'ORDER BY b."dateMixed" DESC',
+        'LIMIT 6',
+      ].join(" "),
+    ),
+    dbQuery<{ count: string }>(
+      'SELECT COUNT(*)::text as count FROM "User" WHERE "status" = $1',
+      [UserStatus.PENDING],
+    ).then((rows) => Number(rows[0]?.count ?? 0)),
   ]);
 
   const latest = tests.at(-1);
@@ -296,46 +315,27 @@ export const getDashboardData = withStaticCache("dashboard-data", async () => {
   const recentWindow = tests.slice(-8);
   const recoveryTrend: TrendPoint[] = recentWindow
     .map((test) => ({
-      batch: test.batch.batchCode,
+      batch: test.batchCode,
       value: getNumericMetric(test as Record<string, unknown>, "elasticRecoveryPct") ?? 0,
     }))
     .filter((point) => typeof point.value === "number");
 
   const storabilityTrend: TrendPoint[] = recentWindow
     .map((test) => ({
-      batch: test.batch.batchCode,
+      batch: test.batchCode,
       value: getNumericMetric(test as Record<string, unknown>, "storabilityPct") ?? 0,
     }))
     .filter((point) => typeof point.value === "number");
 
   const recentBatches: RecentBatchRow[] = batches.map((batch) => ({
-    id: batch.slug,
+    id: batch.id,
     batch: batch.batchCode,
-    formula: batch.formulation.code,
-    date: formatDate(batch.dateMixed),
+    formula: batch.formulationCode,
+    date: batch.dateMixed ? formatDate(new Date(batch.dateMixed)) : "n/a",
     status: mapStatus(batch.status),
   }));
 
-  const complianceClient = (prisma as Record<string, any>).complianceResult;
-  const complianceSummary =
-    latest && complianceClient
-      ? await complianceClient
-          .findMany({
-            where: { testId: latest.id },
-            include: { standard: true },
-          })
-          .then((rows: Array<{ standard: { code: string }; overallPass: boolean | null }>) =>
-            rows.map((row) => ({
-              standard: row.standard.code,
-              status:
-                row.overallPass === null
-                  ? "pending"
-                  : row.overallPass
-                  ? "pass"
-                  : "fail",
-            })),
-          )
-      : [];
+  const complianceSummary: { standard: string; status: string }[] = [];
 
   return {
     metrics,

@@ -1,368 +1,493 @@
 export const runtime = "nodejs";
 
+import type { Route } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import type { BinderTestExtractedData } from "@/lib/binder/types";
-import { Analytics } from "@/lib/analytics";
-import {
-  binderSpecConstants,
-  getElasticRecoveryLimit,
-  getJnrLimit,
-  isDuctilityPass,
-  isElasticRecoveryPass,
-  isJnrPass,
-  isSofteningPointPass,
-  isViscosityPass,
-} from "@/lib/analytics/binder-spec";
+import path from "path";
 import { dbApi } from "@/lib/dbApi";
-
-type LinkedTestResult = {
-  storageStabilityRecoveryPercent: number | null;
-  storageStabilityGstarPercent: number | null;
-  storageStabilityJnrPercent: number | null;
-  deltaSoftening: number | null;
-  softeningPoint: number | null;
-  viscosity135: number | null;
-  ductility15: number | null;
-  ductility25: number | null;
-  recovery: number | null;
-  pgHigh: number | null;
-  pgLow: number | null;
-};
+import { DashboardCard } from "@/components/ui/dashboard-card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ViewModeGate } from "@/components/view-mode/view-mode-gate";
+import { ConfirmButtonClient, ParseButtonClient } from "@/components/binder/parse-confirm-buttons";
+import { ParsedDataViewer } from "@/components/binder/ParsedDataViewer";
+import { GenerateSummaryButton } from "@/components/binder/GenerateSummaryButton";
+import { PeerReviewForms } from "@/components/binder/PeerReviewForms";
+import { EvidenceGroupedView } from "@/components/binder/EvidenceGroupedView";
+import { FileUploadButton } from "@/components/files/file-upload-button";
+import { ProgressSteps } from "@/components/binder/ProgressSteps";
+import { ManualMetricForm } from "@/components/binder/ManualMetricForm";
+import { InvalidateMetricButton } from "@/components/binder/InvalidateMetricButton";
 
 type BinderTestDetail = {
   id: string;
-  name: string | null;
-  testName: string;
   status: string;
-  pgHigh: number | null;
-  pgLow: number | null;
-  batchId: string | null;
-  binderSource: string | null;
-  crmPct: number | null;
-  reagentPct: number | null;
-  aerosilPct: number | null;
-  aiExtractedData: Record<string, unknown> | null;
-  dsrData: Record<string, number> | null;
-  lab: string | null;
-  operator: string | null;
-  jnr_3_2: number | null;
-  recoveryPct: number | null;
-  softeningPointC: number | null;
-  viscosity155_cP: number | null;
-  ductilityCm: number | null;
-  notes: string | null;
-  createdAt: string;
+  lifecycleStatus?: string | null;
+  pmaTestBatch?: { id: string; batchCode: string | null } | null;
+  pmaTestBatchCode?: string | null;
+  pmaTestBatchId?: string | null;
+  bitumenOrigin?: { refineryName: string | null } | null;
+  capsuleFormula?: { name: string | null } | null;
+  conditioning?: string | null;
+  notes?: string | null;
   updatedAt: string;
-  linkedTestResult: LinkedTestResult | null;
+  files?: {
+    id: string;
+    fileName: string;
+    mimeType: string | null;
+    size?: number | null;
+    url: string;
+    createdAt: string;
+    uploadSection?: string | null;
+    uploadedBy?: string | null;
+    uploadedAt?: string | null;
+    uploadedAfterFinalization?: boolean;
+  }[];
 };
 
-function formatDateTime(date: string | Date) {
-  const d = typeof date === "string" ? new Date(date) : date;
-  return new Intl.DateTimeFormat("en-CA", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(d);
-}
+type Metric = {
+  id: string;
+  metricType: string;
+  metricName?: string | null;
+  position: string | null;
+  value: string | number | null;
+  units: string | null;
+  temperature: string | number | null;
+  frequency: string | number | null;
+  sourceFile: { id?: string; filename?: string | null } | null;
+  sourcePage?: number | null;
+  confidence?: string | number | null;
+  language: string | null;
+  isUserConfirmed: boolean;
+  parseRunId?: string | null;
+  isInvalidated?: boolean;
+  invalidationReason?: string | null;
+};
 
-type FieldRow = { label: string; value: string | number | null | undefined };
+type SummaryListItem = {
+  version: number;
+  doiLikeId: string;
+  status: string;
+  createdAt: string;
+  createdByUserId?: string | null;
+  createdByRole?: string | null;
+  supersedesSummaryId?: string | null;
+};
 
-export default async function BinderTestDetailPage({ params }: { params: Promise<{ id: string }> }) {
+type PeerComment = {
+  id: string;
+  summaryVersion: number | null;
+  commentType: string;
+  commentText: string;
+  createdByUserId?: string | null;
+  createdByRole?: string | null;
+  createdAt: string;
+  resolved: boolean;
+  resolvedByUserId?: string | null;
+  resolvedAt?: string | null;
+};
+
+type PeerDecision = {
+  id: string;
+  summaryVersion: number;
+  decision: string;
+  decisionNotes?: string | null;
+  reviewerUserId?: string | null;
+  reviewerRole?: string | null;
+  createdAt: string;
+};
+
+type PageProps = { params: Promise<{ id: string }> };
+
+export default async function BinderTestDetailPage({ params }: PageProps) {
   const { id } = await params;
-
-  let test: BinderTestDetail | null = null;
-  try {
-    test = await dbApi<BinderTestDetail>(`/db/binder-tests/${id}`);
-  } catch {
-    return notFound();
+  const detail = await loadBinderTest(id);
+  if (!detail) {
+    notFound();
   }
 
-  const extracted: Partial<BinderTestExtractedData> = (test.aiExtractedData as any)?.data ?? {};
-  const dsrData = (test.dsrData as Record<string, number> | null) ?? null;
-  const linkedTestResult = test.linkedTestResult;
-
-  const computedPgHigh = await computePgFromPython({
-    currentPgHigh: extracted.pgHigh ?? test.pgHigh,
-    dsrData,
-  });
-
-  const performance: FieldRow[] = [
-    {
-      label: "Performance Grade",
-      value: extracted.performanceGrade ?? buildPg(extracted.pgHigh ?? test.pgHigh ?? computedPgHigh, test.pgLow),
-    },
-    { label: "PG High (°C)", value: extracted.pgHigh ?? test.pgHigh ?? computedPgHigh },
-    { label: "PG Low (°C)", value: extracted.pgLow ?? test.pgLow },
-  ];
-
-  const physical: FieldRow[] = [
-    { label: "Flash Point COC (°C)", value: extracted.flashPointCOC_C },
-    { label: "Softening Point (°C)", value: extracted.softeningPointC ?? test.softeningPointC },
-    { label: "Viscosity @155°C (Pa·s)", value: extracted.viscosity155_PaS },
-    { label: "Viscosity @155°C (cP)", value: extracted.viscosity155_cP ?? test.viscosity155_cP },
-    { label: "Ductility (cm)", value: extracted.ductilityCm ?? test.ductilityCm },
-  ];
-
-  const dsr: FieldRow[] = [
-    { label: "Original DSR @82°C (kPa)", value: extracted.dsr_original_82C_kPa },
-    { label: "RTFO Mass Change (%)", value: extracted.rtfo_massChange_pct },
-    { label: "RTFO DSR @82°C (kPa)", value: extracted.dsr_rtfo_82C_kPa },
-    { label: "PAV DSR @34°C (kPa)", value: extracted.dsr_pav_34C_kPa },
-  ];
-
-  const bbr: FieldRow[] = [
-    { label: "BBR Stiffness @-12°C (MPa)", value: extracted.bbr_stiffness_minus12C_MPa },
-    { label: "BBR m-Value @-12°C", value: extracted.bbr_mValue_minus12C },
-  ];
-
-  const mscr: FieldRow[] = [
-    { label: "MSCR Jnr @3.2 kPa⁻¹", value: extracted.mscr_jnr_3_2_kPa_inv ?? extracted.jnr_3_2 ?? test.jnr_3_2 },
-    { label: "MSCR % Recovery @64°C (%)", value: extracted.mscr_percentRecovery_64C_pct },
-    { label: "Percent Recovery Overall (%)", value: extracted.mscr_percentRecoveryOverall_pct ?? extracted.recoveryPct ?? test.recoveryPct },
-  ];
-
-  const meta: FieldRow[] = [
-    { label: "Binder Source", value: test.binderSource },
-    { label: "Testing Location", value: extracted.testingLocation },
-    { label: "Test Report #", value: extracted.testReportNumber },
-    { label: "Sample / Binder Name", value: extracted.sampleName ?? test.name ?? test.binderSource },
-    { label: "Test Date", value: extracted.testDate },
-    { label: "Lab Name", value: extracted.labName ?? test.lab },
-    { label: "Operator", value: test.operator },
-    { label: "CRM %", value: test.crmPct },
-    { label: "Reagent %", value: test.reagentPct },
-    { label: "Aerosil %", value: test.aerosilPct },
-    { label: "Batch ID", value: test.batchId },
-  ];
-
-  const specRows = buildSpecRows({
-    pgHigh: extracted.pgHigh ?? test.pgHigh ?? computedPgHigh ?? null,
-    pgLow: extracted.pgLow ?? test.pgLow ?? null,
-    jnr: extracted.mscr_jnr_3_2_kPa_inv ?? extracted.jnr_3_2 ?? test.jnr_3_2 ?? null,
-    recovery: extracted.mscr_percentRecoveryOverall_pct ?? extracted.recoveryPct ?? test.recoveryPct ?? null,
-    softening: extracted.softeningPointC ?? test.softeningPointC ?? null,
-    ductility: extracted.ductilityCm ?? test.ductilityCm ?? null,
-    viscosity: extracted.viscosity155_cP ?? test.viscosity155_cP ?? null,
-  });
+  const files: BinderTestDetail["files"] = detail.files ?? [];
+  const metrics: Metric[] = detail.metrics ?? (await loadMetrics(id));
+  const summaries = await loadSummaries(id);
+  const latestSummary = summaries[0];
+  const summaryVersion = latestSummary?.version ?? null;
+  const comments = summaryVersion ? await loadPeerComments(id, summaryVersion) : [];
+  const decisions = summaryVersion ? await loadPeerDecisions(id, summaryVersion) : [];
+  const hasFiles = files.length > 0;
+  const lifecycleStatus = detail.lifecycleStatus ?? detail.status;
+  const latestSummaryCreatedAt = latestSummary ? new Date(latestSummary.createdAt).getTime() : null;
+  const newestFileUploadedAt =
+    files.length > 0 ? Math.max(...files.map((f) => new Date(f.createdAt).getTime())) : null;
+  const newEvidence =
+    latestSummaryCreatedAt !== null && newestFileUploadedAt !== null && newestFileUploadedAt > latestSummaryCreatedAt;
+  const stepStates = buildStepStates(lifecycleStatus, Boolean(latestSummary));
+  const invalidatedCount = metrics.filter((m) => m.isInvalidated).length;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <ProgressSteps steps={stepStates} />
+      <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs text-muted-foreground">Binder Test – View Details</p>
-          <h1 className="text-2xl font-semibold tracking-tight">{test.name}</h1>
-          <p className="text-sm text-muted-foreground">Created {formatDateTime(test.createdAt)}</p>
+          <h1 className="text-3xl font-bold text-[var(--color-text-heading)]">Binder Test {detail.id}</h1>
+          <p className="text-[var(--color-text-muted)]">
+            Status: {lifecycleStatus} · PMA Batch: {detail.pmaTestBatch?.batchCode ?? detail.pmaTestBatchCode ?? "N/A"} ·
+            Origin: {detail.bitumenOrigin?.refineryName ?? "N/A"} · Capsule: {detail.capsuleFormula?.name ?? "N/A"}
+          </p>
+          <p className="text-[var(--color-text-muted)] text-sm">
+            Conditioning: {detail.conditioning || "N/A"} · Updated: {new Date(detail.updatedAt).toLocaleString()}
+          </p>
+          {newEvidence && latestSummary && (
+            <div className="mt-2">
+              <Badge variant="secondary">New evidence added since Summary v{latestSummary.version}</Badge>
+            </div>
+          )}
         </div>
-        <div className="flex flex-col items-end gap-2 text-sm">
-          <Badge variant="secondary">{test.status}</Badge>
-          <div className="text-xs text-muted-foreground">
-            CRM: {test.crmPct ?? "-"}% · Reagent: {test.reagentPct ?? "-"}% · Aerosil: {test.aerosilPct ?? "-"}%
+        <ViewModeGate minRole="RESEARCHER">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="primary" asChild className="bg-primary text-white hover:bg-primaryHover">
+              <Link href={"/binder-tests" as Route}>Back to list</Link>
+            </Button>
+            <ParsedDataViewer metrics={metrics} />
+            {latestSummary ? (
+              <Button asChild variant="secondary">
+                <Link href={`/binder-tests/${id}/summary/${latestSummary.version}` as Route}>View Final Summary</Link>
+              </Button>
+            ) : (
+              <Button variant="secondary" disabled>
+                View Final Summary
+              </Button>
+            )}
+            <GenerateSummaryButton binderTestId={detail.id} disabled={lifecycleStatus !== "READY" || Boolean(latestSummary)} />
           </div>
-        </div>
-      </div>
+        </ViewModeGate>
+      </header>
 
-      {specRows.length > 0 && (
-        <section className="rounded-xl border bg-card p-4">
-          <div className="mb-3">
-            <div className="text-sm font-semibold text-[var(--color-text-heading)]">Specification checks</div>
-            <p className="text-xs text-[var(--color-text-muted)]">Calculated vs. current spec thresholds.</p>
+      <DashboardCard
+        title="Upload Evidence"
+        description="Batch upload any binder test evidence. VM will classify and decide parse eligibility."
+      >
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="space-y-2 rounded-xl border border-border-subtle bg-white/70 p-3">
+            <h3 className="text-sm font-semibold text-[var(--color-text-heading)]">Batch upload</h3>
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Drag-and-drop or multi-select. File type filters are client-only; VM decides how to use each file.
+            </p>
+            <ViewModeGate minRole="RESEARCHER">
+              <FileUploadButton target="binder_test" targetId={detail.id} uploadSection={undefined} />
+            </ViewModeGate>
           </div>
-          <div className="space-y-2">
-            {specRows.map((row) => (
+        </div>
+      </DashboardCard>
+
+      <DashboardCard
+        title="Evidence"
+        description="Grouped by VM-provided upload_section. Filters are visual only and do not affect parsing."
+      >
+        {files.length === 0 ? (
+          <p className="text-sm text-[var(--color-text-muted)]">No files yet.</p>
+        ) : (
+          <EvidenceGroupedView files={files} latestSummaryCreatedAt={latestSummaryCreatedAt} />
+        )}
+      </DashboardCard>
+
+      <DashboardCard title="Parse & Interpret">
+        <p className="text-sm text-[var(--color-text-muted)] mb-3">Send files to Python for parsing.</p>
+        <ParseButton binderTestId={detail.id} hasFiles={hasFiles} />
+      </DashboardCard>
+
+      <DashboardCard title="Review Extracted Binder Metrics">
+        {invalidatedCount > 0 && (
+          <p className="text-xs font-semibold text-[var(--color-text-muted)]">
+            {invalidatedCount} parsed metric{invalidatedCount === 1 ? " was" : "s were"} invalidated and excluded from analysis.
+          </p>
+        )}
+        {metrics.length === 0 ? (
+          <p className="text-sm text-[var(--color-text-muted)]">No metrics yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {metrics.map((m) => (
               <div
-                key={row.label}
-                className="flex items-center justify-between rounded-lg border border-border-subtle bg-white px-3 py-2 text-sm"
+                key={m.id}
+                className={`rounded-lg border border-border-subtle bg-white/70 px-3 py-2 text-sm text-[var(--color-text-main)] ${
+                  m.isInvalidated ? "opacity-70 grayscale" : ""
+                }`}
               >
-                <div className="space-y-0.5">
-                  <div className="font-semibold text-[var(--color-text-heading)]">{row.label}</div>
-                  <div className="text-xs text-[var(--color-text-muted)]">{row.requirement}</div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold">
+                    {m.metricName ?? m.metricType} {m.position ? `· ${m.position}` : ""}
+                  </p>
+                  <span className="text-xs text-[var(--color-text-muted)]">{m.language ?? "?"}</span>
                 </div>
-                <div className="text-right text-sm font-semibold text-[var(--color-text-heading)]">
-                  {row.value ?? "—"}{" "}
-                  {row.pass === null ? (
-                    <span className="text-[var(--color-text-muted)] text-xs">no data</span>
-                  ) : row.pass ? (
-                    <span className="text-emerald-600 text-xs font-semibold">✅ Pass</span>
-                  ) : (
-                    <span className="text-red-600 text-xs font-semibold">⚠️ Check</span>
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  {formatScalar(m.value, "—")} {formatScalar(m.units, "")} {m.temperature ? `@ ${formatScalar(m.temperature, "—")}` : ""}{" "}
+                  {m.frequency ? `· ${formatScalar(m.frequency)}` : ""}
+                </p>
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  Source: {formatSource(m.sourceFile)} {m.sourcePage ? `p.${m.sourcePage}` : ""} · Confidence:{" "}
+                  {formatScalar(m.confidence, "?")} · {m.isUserConfirmed ? "Confirmed" : "Pending"}
+                </p>
+                {m.parseRunId && (
+                  <p className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">Parse run: {m.parseRunId}</p>
+                )}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {m.isInvalidated && (
+                    <>
+                      <span className="rounded-full bg-slate-200 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-700">
+                        Invalidated
+                      </span>
+                      {m.invalidationReason && (
+                        <details className="text-xs text-[var(--color-text-muted)]">
+                          <summary className="cursor-pointer underline">Reason</summary>
+                          <div className="mt-1 rounded border border-border-subtle bg-white/70 p-2 text-[var(--color-text-main)]">
+                            {m.invalidationReason}
+                          </div>
+                        </details>
+                      )}
+                    </>
+                  )}
+                  {!m.isInvalidated && !m.isUserConfirmed && !latestSummary && (
+                    <InvalidateMetricButton binderTestId={detail.id} metricId={m.id} />
                   )}
                 </div>
               </div>
             ))}
           </div>
-        </section>
-      )}
-
-      <Section title="Performance Grade" fields={performance} />
-      <Section title="Basic Physical Properties" fields={physical} />
-      <Section title="DSR (High Temperature)" fields={dsr} />
-      <Section title="BBR (Low Temperature)" fields={bbr} />
-      <Section title="MSCR" fields={mscr} />
-      <Section title="Metadata" fields={meta} />
-
-      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h3 className="mb-2 text-sm font-semibold">Storage Stability</h3>
-          <ul className="text-sm">
-            <li>
-              Recovery Variation:{" "}
-              {(linkedTestResult as any)?.storageStabilityRecoveryPercent ?? "N/A"}%
-            </li>
-            <li>G* Variation: {(linkedTestResult as any)?.storageStabilityGstarPercent ?? "N/A"}%</li>
-            <li>Jnr Variation: {(linkedTestResult as any)?.storageStabilityJnrPercent ?? "N/A"}%</li>
-            <li>Δ Softening: {(linkedTestResult as any)?.deltaSoftening ?? "N/A"}°C</li>
-          </ul>
+        )}
+        <div className="mt-3">
+          <ViewModeGate minRole="RESEARCHER">
+            <ManualMetricForm binderTestId={detail.id} files={files} />
+          </ViewModeGate>
         </div>
+      </DashboardCard>
 
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h3 className="mb-2 text-sm font-semibold">Binder Metrics</h3>
-          <ul className="text-sm">
-            <li>
-              Softening Point:{" "}
-              {(linkedTestResult as any)?.softeningPoint ?? test.softeningPointC ?? "N/A"}°C
-            </li>
-            <li>Viscosity 135°C: {(linkedTestResult as any)?.viscosity135 ?? "N/A"}</li>
-            <li>
-              Ductility 15°C: {(linkedTestResult as any)?.ductility15 ?? test.ductilityCm ?? "N/A"} cm
-            </li>
-            <li>Ductility 25°C: {(linkedTestResult as any)?.ductility25 ?? "N/A"} cm</li>
-            <li>
-              Elastic Recovery: {(linkedTestResult as any)?.recovery ?? test.recoveryPct ?? "N/A"}%
-            </li>
-            <li>
-              PG: {(linkedTestResult as any)?.pgHigh ?? test.pgHigh ?? "?"} -{" "}
-              {(linkedTestResult as any)?.pgLow ?? test.pgLow ?? "?"}
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      {test.notes && (
-        <div className="rounded-xl border bg-card p-4">
-          <div className="text-sm font-semibold">Notes</div>
-          <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{test.notes}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Section({ title, fields }: { title: string; fields: FieldRow[] }) {
-  return (
-    <div className="rounded-xl border bg-card p-4">
-      <div className="text-sm font-semibold mb-3">{title}</div>
-      <dl className="grid gap-3 sm:grid-cols-2">
-        {fields.map((field) => (
-          <div key={field.label} className="space-y-1">
-            <dt className="text-xs font-medium text-muted-foreground">{field.label}</dt>
-            <dd className="text-sm text-[var(--color-text-heading)]">{field.value ?? "—"}</dd>
+      <DashboardCard title="Finalized Summaries" description="Immutable versions derived from confirmed metrics.">
+        {summaries.length === 0 ? (
+          <p className="text-sm text-[var(--color-text-muted)]">No summaries have been generated yet.</p>
+        ) : (
+          <div className="divide-y divide-border rounded-lg border border-border-subtle bg-white/70">
+            {summaries.map((s) => (
+              <div key={s.version} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                <div>
+                  <p className="font-semibold text-[var(--color-text-heading)]">
+                    v{s.version} · {s.doiLikeId}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    {s.status} · Created {new Date(s.createdAt).toLocaleString()} by {s.createdByUserId ?? "system"}
+                  </p>
+                </div>
+                <Link href={`/binder-tests/${id}/summary/${s.version}` as Route} className="text-[var(--color-text-link)] underline">
+                  Open
+                </Link>
+              </div>
+            ))}
           </div>
-        ))}
-      </dl>
+        )}
+      </DashboardCard>
+
+      <DashboardCard title="Peer Review" description={summaryVersion ? `Reviewing summary v${summaryVersion}` : "Generate a summary first."}>
+        {summaryVersion ? (
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-semibold text-[var(--color-text-muted)]">Comments</p>
+              {comments.length === 0 ? (
+                <p className="text-sm text-[var(--color-text-muted)]">No peer comments yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {comments.map((c) => (
+                    <div key={c.id} className="rounded-lg border border-border-subtle bg-white/70 px-3 py-2 text-sm">
+                      <p className="font-semibold text-[var(--color-text-heading)]">
+                        {c.commentType} · {new Date(c.createdAt).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-[var(--color-text-muted)]">
+                        {c.commentText} — {c.createdByRole ?? "Reviewer"} {c.createdByUserId ?? ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-[var(--color-text-muted)]">Decisions</p>
+              {decisions.length === 0 ? (
+                <p className="text-sm text-[var(--color-text-muted)]">No peer review decisions yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {decisions.map((d) => (
+                    <div key={d.id} className="rounded-lg border border-border-subtle bg-white/70 px-3 py-2 text-sm">
+                      <p className="font-semibold text-[var(--color-text-heading)]">
+                        {d.decision} · {new Date(d.createdAt).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-[var(--color-text-muted)]">
+                        {d.decisionNotes ?? "No notes"} — {d.reviewerRole ?? "Reviewer"} {d.reviewerUserId ?? ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <ViewModeGate minRole="RESEARCHER">
+              <PeerReviewForms binderTestId={detail.id} summaryVersion={summaryVersion} />
+            </ViewModeGate>
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--color-text-muted)]">Create a summary to begin peer review.</p>
+        )}
+      </DashboardCard>
+
+      <DashboardCard title="Confirm Binder Test">
+        <ConfirmButton binderTestId={detail.id} />
+      </DashboardCard>
     </div>
   );
 }
 
-function buildPg(pgHigh?: number | null, pgLow?: number | null) {
-  if (pgHigh === null || pgHigh === undefined || pgLow === null || pgLow === undefined) return null;
-  return `PG ${pgHigh}-${Math.abs(pgLow)}`;
+function ParseButton({ binderTestId, hasFiles }: { binderTestId: string; hasFiles: boolean }) {
+  return <ParseButtonClient binderTestId={binderTestId} disabled={!hasFiles} />;
 }
 
-function buildSpecRows(inputs: {
-  pgHigh: number | null;
-  pgLow: number | null;
-  jnr: number | null;
-  recovery: number | null;
-  softening: number | null;
-  ductility: number | null;
-  viscosity: number | null;
-}) {
-  const rows: { label: string; requirement: string; value: number | null; pass: boolean | null }[] = [];
-
-  if (inputs.jnr !== null) {
-    const limit = getJnrLimit(inputs.pgHigh ?? undefined, inputs.pgLow ?? undefined);
-    rows.push({
-      label: "Jnr (64°C, 3.2 kPa)",
-      requirement: `≤ ${limit}`,
-      value: Number.isFinite(inputs.jnr) ? inputs.jnr : null,
-      pass: Number.isFinite(inputs.jnr) ? isJnrPass(inputs.jnr, inputs.pgHigh ?? undefined, inputs.pgLow ?? undefined) : null,
-    });
-  }
-
-  if (inputs.recovery !== null) {
-    const limit = getElasticRecoveryLimit(inputs.pgHigh ?? undefined, inputs.pgLow ?? undefined);
-    rows.push({
-      label: "Elastic Recovery (%)",
-      requirement: `≥ ${limit}`,
-      value: Number.isFinite(inputs.recovery) ? inputs.recovery : null,
-      pass: Number.isFinite(inputs.recovery)
-        ? isElasticRecoveryPass(inputs.recovery, inputs.pgHigh ?? undefined, inputs.pgLow ?? undefined)
-        : null,
-    });
-  }
-
-  if (inputs.softening !== null) {
-    rows.push({
-      label: "Softening Point (°C)",
-      requirement: `≥ ${binderSpecConstants.MIN_SOFTENING_POINT}`,
-      value: Number.isFinite(inputs.softening) ? inputs.softening : null,
-      pass: Number.isFinite(inputs.softening) ? isSofteningPointPass(inputs.softening) : null,
-    });
-  }
-
-  if (inputs.ductility !== null) {
-    rows.push({
-      label: "Ductility @15°C (cm)",
-      requirement: `≥ ${binderSpecConstants.MIN_DUCTILITY_15C}`,
-      value: Number.isFinite(inputs.ductility) ? inputs.ductility : null,
-      pass: Number.isFinite(inputs.ductility) ? isDuctilityPass(inputs.ductility) : null,
-    });
-  }
-
-  if (inputs.viscosity !== null) {
-    rows.push({
-      label: "Viscosity (cP)",
-      requirement: `≤ ${binderSpecConstants.MAX_VISCOSITY_135_CP} @135°C (pending confirm)`,
-      value: Number.isFinite(inputs.viscosity) ? inputs.viscosity : null,
-      pass: Number.isFinite(inputs.viscosity) ? isViscosityPass(inputs.viscosity) : null,
-    });
-  }
-
-  return rows;
+function ConfirmButton({ binderTestId }: { binderTestId: string }) {
+  return <ConfirmButtonClient binderTestId={binderTestId} />;
 }
 
-async function computePgFromPython({
-  currentPgHigh,
-  dsrData,
-}: {
-  currentPgHigh?: number | null;
-  dsrData: Record<string, number> | null;
-}) {
-  if (currentPgHigh || !dsrData || !Object.keys(dsrData).length) {
-    return currentPgHigh ?? null;
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const idx = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  return `${(bytes / Math.pow(1024, idx)).toFixed(1)} ${units[idx]}`;
+}
+
+async function loadBinderTest(id: string): Promise<BinderTestDetail | null> {
+  try {
+    const detail = await dbApi<BinderTestDetail & { files?: any[]; metrics?: Metric[] }>(`/db/binder-tests/${id}`);
+    const mappedFiles =
+      detail.files?.map((f) => {
+        const rawUrl = f.url ?? f.fileUrl ?? f.path ?? "";
+        const isHttp = rawUrl.startsWith("http://") || rawUrl.startsWith("https://");
+        const needsProxy = rawUrl && !isHttp && !rawUrl.startsWith("/api/binder-tests/file");
+        const proxyUrl = needsProxy ? `/api/binder-tests/file?path=${encodeURIComponent(path.normalize(rawUrl))}` : rawUrl;
+        return {
+          id: f.id ?? f.fileId ?? f.fileUrl,
+          fileName: f.fileName ?? f.label ?? f.fileUrl ?? rawUrl,
+          mimeType: f.mimeType ?? f.fileType ?? null,
+          size: f.size ?? null,
+          url: proxyUrl || rawUrl,
+          createdAt: f.createdAt ?? f.uploadedAt ?? detail.updatedAt,
+          uploadSection: f.uploadSection ?? f.upload_section ?? null,
+          uploadedBy: f.uploadedBy ?? f.uploaded_by ?? null,
+          uploadedAt: f.uploadedAt ?? f.uploaded_at ?? f.createdAt ?? detail.updatedAt,
+          uploadedAfterFinalization: f.uploadedAfterFinalization ?? f.uploaded_after_finalization ?? false,
+        };
+      }) ?? [];
+    return { ...detail, files: mappedFiles };
+  } catch (err) {
+    console.error("loadBinderTest", err);
+    return null;
   }
+}
 
-  const temps = Object.keys(dsrData)
-    .map((key) => Number(key))
-    .filter((value) => Number.isFinite(value))
-    .sort((a, b) => a - b);
+async function loadMetrics(id: string): Promise<Metric[]> {
+  try {
+    return await dbApi<Metric[]>(`/binder-tests/${id}/metrics`);
+  } catch (err) {
+    console.error("loadMetrics", err);
+    return [];
+  }
+}
 
-  if (!temps.length) return null;
+async function loadSummaries(id: string): Promise<SummaryListItem[]> {
+  try {
+    const summaries = await dbApi<SummaryListItem[]>(`/binder-tests/${id}/summaries`);
+    return summaries;
+  } catch (err) {
+    console.error("loadSummaries", err);
+    return [];
+  }
+}
 
-  const gstar = [];
-  for (const temp of temps) {
-    const val = dsrData[String(temp)];
-    if (typeof val !== "number" || Number.isNaN(val)) {
-      return null;
+async function loadPeerComments(id: string, version: number): Promise<PeerComment[]> {
+  try {
+    const comments = await dbApi<PeerComment[]>(`/binder-tests/${id}/peer-comments?version=${version}`);
+    return comments;
+  } catch (err: any) {
+    if (err?.status === 404 || (err?.message || "").includes("Not Found")) return [];
+    console.error("loadPeerComments", err);
+    return [];
+  }
+}
+
+async function loadPeerDecisions(id: string, version: number): Promise<PeerDecision[]> {
+  try {
+    const decisions = await dbApi<PeerDecision[]>(`/binder-tests/${id}/peer-review-decisions?version=${version}`);
+    return decisions;
+  } catch (err: any) {
+    if (err?.status === 404 || (err?.message || "").includes("Not Found")) return [];
+    console.error("loadPeerDecisions", err);
+    return [];
+  }
+}
+
+function formatScalar(value: unknown, fallback: string = ""): string {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "object") {
+    const maybeFile = value as any;
+    if (maybeFile?.filename || maybeFile?.fileName) return maybeFile.filename ?? maybeFile.fileName;
+    if (maybeFile?.id) return maybeFile.id;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return fallback;
     }
-    gstar.push(val);
+  }
+  return String(value);
+}
+
+function formatSource(source: unknown): string {
+  if (source === null || source === undefined) return "?";
+  if (typeof source === "object") {
+    const s = source as any;
+    return s.filename ?? s.fileName ?? s.url ?? s.id ?? "?";
+  }
+  return String(source);
+}
+
+type Step = { label: string; status: "done" | "active" | "pending" };
+
+function buildStepStates(lifecycleStatus: string | null, hasSummary: boolean): Step[] {
+  const normalized = (lifecycleStatus || "").toUpperCase();
+  const steps: Step[] = [
+    { label: "Upload evidence", status: "pending" },
+    { label: "Parse", status: "pending" },
+    { label: "Confirm metrics", status: "pending" },
+    { label: "Finalize summary", status: "pending" },
+  ];
+
+  const markDone = (index: number) => {
+    for (let i = 0; i <= index; i++) {
+      steps[i].status = "done";
+    }
+  };
+
+  const setActive = (index: number) => {
+    if (steps[index].status !== "done") steps[index].status = "active";
+  };
+
+  if (hasSummary) {
+    markDone(3);
+    return steps;
   }
 
-  const { pg_high: pgHigh } = await Analytics.computePgGrade({
-    g_original: gstar[0],
-    delta_original: temps[0],
-    g_rtfo: gstar[0] * 0.85,
-    delta_rtfo: temps[0],
-  });
-  return pgHigh ?? null;
+  if (["READY"].includes(normalized)) {
+    markDone(2);
+    setActive(3);
+  } else if (["REVIEW_REQUIRED", "UNDER_REVIEW", "CLASSIFIED"].includes(normalized)) {
+    markDone(1);
+    setActive(2);
+  } else if (["FILES_UPLOADED"].includes(normalized)) {
+    markDone(0);
+    setActive(1);
+  } else {
+    setActive(0);
+  }
+
+  return steps;
 }

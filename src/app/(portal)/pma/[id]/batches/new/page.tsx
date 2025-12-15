@@ -31,8 +31,8 @@ export default function NewPmaBatchPage({ params }: PageProps) {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      console.error("Failed to create PMA batch", await res.text());
-      return;
+      const text = await res.text();
+      throw new Error(text || "Failed to create PMA batch");
     }
     router.push(`/pma/${id}/batches` as Route);
   }

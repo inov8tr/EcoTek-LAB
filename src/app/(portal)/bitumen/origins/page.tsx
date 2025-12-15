@@ -1,15 +1,30 @@
+export const runtime = "nodejs";
+
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import type { Route } from "next";
 import { DashboardCard } from "@/components/ui/dashboard-card";
 import { Button } from "@/components/ui/button";
 import { ViewModeGate } from "@/components/view-mode/view-mode-gate";
-import type { Route } from "next";
+import { dbQuery } from "@/lib/db-proxy";
+
+type BitumenOriginRow = {
+  id: string;
+  refineryName: string;
+  binderGrade: string | null;
+  description: string | null;
+  originCountry: string | null;
+  baseTestsCount: number | null;
+};
 
 export default async function BitumenOriginsPage() {
-  const origins = await prisma.bitumenOrigin.findMany({
-    include: { baseTests: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const origins = await dbQuery<BitumenOriginRow>(
+    [
+      'SELECT bo."id", bo."refineryName", bo."binderGrade", bo."description", bo."originCountry",',
+      '  (SELECT COUNT(*) FROM "BitumenBaseTest" bbt WHERE bbt."bitumenOriginId" = bo."id") AS "baseTestsCount"',
+      'FROM "BitumenOrigin" bo',
+      'ORDER BY bo."createdAt" DESC',
+    ].join(" "),
+  );
 
   return (
     <div className="space-y-6">
@@ -67,7 +82,7 @@ export default async function BitumenOriginsPage() {
                   <tr key={`table-${origin.id}`} className="border-b border-neutral-100">
                     <td className="px-4 py-3 text-neutral-900">{origin.refineryName}</td>
                     <td className="px-4 py-3 text-neutral-700">{origin.binderGrade ?? "—"}</td>
-                    <td className="px-4 py-3 text-neutral-700">{origin.baseTests.length}</td>
+                    <td className="px-4 py-3 text-neutral-700">{origin.baseTestsCount ?? 0}</td>
                     <td className="px-4 py-3 text-right">
                       <Button asChild variant="ghost" size="sm">
                         <Link href={`/bitumen/origins/${origin.id}` as Route}>Open</Link>
@@ -89,7 +104,7 @@ export default async function BitumenOriginsPage() {
             description={origin.description || origin.originCountry || "No description"}
             footer={
               <div className="flex items-center justify-between text-xs">
-                <span>{origin.baseTests.length} base tests</span>
+                <span>{origin.baseTestsCount ?? 0} base tests</span>
                 <Link
                   href={`/bitumen/origins/${origin.id}` as Route}
                   className="font-semibold text-[var(--color-text-link)]"

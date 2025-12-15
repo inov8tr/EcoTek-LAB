@@ -1,10 +1,24 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { prisma } from "@/lib/prisma";
 import { DashboardCard } from "@/components/ui/dashboard-card";
+import { dbQuery } from "@/lib/db-proxy";
 
 type PageProps = { params: Promise<{ id: string }> };
+
+type PmaDetail = {
+  id: string;
+  name: string | null;
+  bitumenGradeOverride: string | null;
+  ecoCapPercentage: number | null;
+  reagentPercentage: number | null;
+  mixRpm: number | null;
+  mixTimeMinutes: number | null;
+  pmaTargetPgHigh: number | null;
+  pmaTargetPgLow: number | null;
+  capsuleFormula: { id: string; name: string | null; materials: any[] } | null;
+  bitumenOrigin: { refineryName: string | null } | null;
+};
 
 export default async function PmaDetailPage({ params }: PageProps) {
   const { id } = await params;
@@ -12,19 +26,12 @@ export default async function PmaDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const pma = await prisma.pmaFormula.findUnique({
-    where: { id },
-    include: {
-      capsuleFormula: { include: { materials: true } },
-      bitumenOrigin: true,
-      bitumenTest: true,
-      batches: { include: { testResults: true }, orderBy: { createdAt: "desc" } },
-    },
-  });
+  const pma = await fetchPma(id);
 
   if (!pma) {
     notFound();
   }
+  const batches = await loadBatches(id);
 
   return (
     <div className="space-y-6">
@@ -64,7 +71,7 @@ export default async function PmaDetailPage({ params }: PageProps) {
 
       <DashboardCard title="Batches">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-[var(--color-text-muted)]">{pma.batches.length} batches</p>
+          <p className="text-sm text-[var(--color-text-muted)]">{batches.length} batches</p>
           <Link
             href={`/pma/${pma.id}/batches/new` as Route}
             className="text-sm font-semibold text-[var(--color-text-link)]"
@@ -73,7 +80,7 @@ export default async function PmaDetailPage({ params }: PageProps) {
           </Link>
         </div>
         <ul className="mt-3 space-y-2 text-sm text-[var(--color-text-main)]">
-          {pma.batches.map((b) => (
+          {batches.map((b) => (
             <li
               key={b.id}
               className="flex items-center justify-between rounded-lg border border-border-subtle bg-white/70 px-3 py-2"
@@ -81,7 +88,7 @@ export default async function PmaDetailPage({ params }: PageProps) {
               <div>
                 <p className="font-semibold">{b.batchCode}</p>
                 <p className="text-xs text-[var(--color-text-muted)]">
-                  Tests: {b.testResults.length}
+                  Tests: {b.testCount ?? 0}
                 </p>
               </div>
               <Link
@@ -104,5 +111,41 @@ function Metric({ label, value }: { label: string; value?: number | null }) {
       <p className="text-[var(--color-text-muted)] text-xs">{label}</p>
       <p className="text-[var(--color-text-heading)] font-semibold">{value ?? "—"}</p>
     </div>
+  );
+}
+
+async function fetchPma(id: string): Promise<PmaDetail | null> {
+  const baseUrl = process.env.DB_API_URL;
+  const apiKey = process.env.DB_API_KEY || process.env.X_API_KEY;
+  if (!baseUrl || !apiKey) {
+    throw new Error("DB_API_URL/DB_API_KEY must be configured");
+  }
+
+  const res = await fetch(`${baseUrl}/db/pma-formulas/${id}`, {
+    headers: { "x-api-key": apiKey },
+    cache: "no-store",
+  });
+
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`DB API error ${res.status}`);
+  }
+  return (await res.json()) as PmaDetail;
+}
+
+async function loadBatches(id: string) {
+  return dbQuery<{
+    id: string;
+    batchCode: string | null;
+    testCount: string | number | null;
+  }>(
+    [
+      'SELECT b."id", b."batchCode",',
+      '  (SELECT COUNT(*)::int FROM "PmaTestResult" tr WHERE tr."pmaBatchId" = b."id") AS "testCount"',
+      'FROM "PmaBatch" b',
+      'WHERE b."pmaFormulaId" = $1',
+      'ORDER BY b."createdAt" DESC',
+    ].join(" "),
+    [id],
   );
 }
